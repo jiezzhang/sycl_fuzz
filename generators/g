@@ -1,0 +1,139 @@
+#!/usr/bin/python
+
+""" Frontend
+"""
+
+from gen import reader, syntax, ir, gen
+
+import sys
+from optparse import OptionParser
+
+version = "0.8.9"
+
+def main():
+    # set huge recursion limit
+    sys.setrecursionlimit(1<<12)
+
+    # parse command line
+    # required options:
+    #   -f, --file  -- write output to FILE (default: stdout)
+    #   -n, --limit -- limit amount of objects generated (default: 4096)
+    #   -d, --debug -- print debugging information to stdout
+    #   -r, --rule  -- set initial rule (default is `S')
+    #   -m, --multiple-files-generation
+    #   -t, --measure-parse-time -- measure time of grammar parsing
+
+    usage = "usage: %prog [options] GRAMMAR"
+
+    parser = OptionParser( usage=usage, version="%prog "+version+'a' )
+    parser.add_option( "-f", "--file",
+        dest="file",
+        help="write output to FILE (default: stdout)",
+        default=None,
+        metavar="FILE" )
+    parser.add_option( "-n", "--limit",
+        dest="limit",
+        type="int",
+        default=4096,
+        help="limit an amount of generated objects (default: 4096)",
+        metavar="N" )
+    parser.add_option( "-d", "--debug",
+        dest="debug",
+        default=False,
+        action="store_true",
+        help="print debugging information to stdout" )
+    parser.add_option( "-r", "--rule",
+        dest="rule",
+        default="S",
+        help="set initial rule (default: S)" )
+    parser.add_option( "-m", "--multiple-files-generation",
+        dest="mult",
+        default=False,
+        action="store_true",
+        help="activate generation of multiple files" )
+    parser.add_option( "-t", "--measure-parse-time",
+        dest="timeit",
+        default=False,
+        action="store_true",
+        help="measure time of grammar parsing and do nothing more" )
+    
+    (options, args) = parser.parse_args()
+
+    # check options
+    
+    if len(args) == 0:
+        parser.error("grammar file expected")
+    elif len(args) > 1:
+        parser.error("reduntant arguments: %s"
+            % ", ".join(args[1:]) )
+
+    if options.mult and options.file:
+        parser.error("incompatible options `-m' and `-f'")
+
+    grammar = args[0]
+
+    if options.timeit:
+        if sys.version_info < (2,6):
+            print>>sys.stderr, "You need at least python-2.6 for this feature"
+            exit(1)
+        
+        def parse():
+            r = reader.Reader(grammar) ; r.parseFile()
+            s = syntax.Syn(r) ; s.parseGrammar()
+            g = gen.Gen()
+            i = ir.IR(s,g) ; i.parseGrammar()
+
+        print "Parsing grammar `%s':" % grammar,
+        import timeit
+        timer = timeit.Timer( parse )
+        print ( "%.3f sec" % timer.timeit(1) )
+        # we are done
+        exit(0)
+
+    # read grammar
+    r = reader.Reader(grammar)
+    r.parseFile()
+    s = syntax.Syn(r)
+    s.parseGrammar()
+    g = gen.Gen()
+    
+    # parse grammar
+    i = ir.IR(s,g)
+    i.parseGrammar()
+
+    # print grammar if needed
+    if options.debug:
+        i.printGrammar()
+
+    # generate output
+    try:
+        if not options.mult:
+            out = None
+            if options.file is not None:
+                try:
+                    out = open(options.file, "wt")
+                except IOError, e:
+                    print>>sys.stderr, str(e)
+            else:
+                out = sys.stdout
+            fullOutput = i.evalRule(options.rule, count=options.limit)
+            out.write(fullOutput)
+            out.close()
+            sys.stdout.close()
+            sys.stderr.close()
+        else:
+            while 1:
+                fname = sys.stdin.readline().strip()
+                if fname == "":
+                    break
+                try: out = open(fname, "wt")
+                except IOError, e: print>>sys.stderr, str(e)
+                fullOutput = i.evalRule(options.rule, count=options.limit)
+                out.write(fullOutput)
+                out.close()
+    except ir.IRException, ie:
+        print>>sys.stderr, str(ie)
+    
+if __name__ == "__main__":
+    main()
+

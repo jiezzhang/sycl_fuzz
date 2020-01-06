@@ -1,0 +1,232 @@
+# C99 pre-grammar, ver. 0.0.0.1
+
+#$ GEN_LENGTH = 4096
+
+debug[] = 0
+#S = sub_ids["i lb ub:a b[i] c[i] i l b lb ub lxs z z z z z i"]
+S = program[dup_filter[ids":"array_ids]]
+dup_filter[(?P<xs>[\w ]*):(?P<as>[\w ]*)] = xs":"sub_ids[xs":"as]
+
+program[(?P<xs>[\w ]*):(?P<as>[\w ]*)] =
+    "#include \"libc.h\""
+    id_decl[xs]
+    arr_decl[as]
+    ""
+    "int main()"
+    "{"
+        init_arrays[any_id[xs]":"as]
+        statements[xs":"xs"@"as"@"] 
+        print_list[xs]
+        print_arr_list[any_id[xs]" "as]
+        "return 0;"
+    "}"
+    ""
+
+init_arrays[(?P<i>\w+):(?P<as>[\w ]*)] =
+    "for ( "i" = 0; "i" < 20; "i"++ )"
+    "{"
+        init_array[i":"as]
+    "}"
+    ""
+
+init_array[\w+:] = 0
+init_array[(?P<i>\w+):(?P<a>\w+) ?(?P<as>[\w ]*)] =
+    a"["i"] = " dec_int ";"
+    init_array[i":"as]
+
+# type
+#type =  *24 "int" | *10 "unsigned int" |
+#    *9 "long" | *6 "unsigned long" |
+#    "short" | "unsigned short" |
+#    *6 "char" | *8 "unsigned char" |
+#    "long long" | "unsigned long long"
+type = *24 "unsigned int" |
+    *6 "unsigned long" |
+    "unsigned short" |
+    *8 "unsigned char" |
+    "unsigned long long"
+
+# expression non-trivial definition
+expr = term[*] T[*]
+T = *3 " " binary_op " " term[*] T[*] | *2 0
+term[] = unary_op " " term | *6 int
+term[.+] =  unary_op " " term[*] |
+        *2 int |
+        *12 any_id[*] |
+        *2 "(" expr[*] ")" |
+        *1 "(" rel_expr[*] " ? " expr[*] " : " expr[*] ")"
+
+# integer expression
+int_expr = int_expr " " binary_op " " int_expr | *4 int_term
+int_term = unary_op " " int_term | *10 int | *4 "(" int_expr ")"
+
+rel_expr = rel_expr[*] " " log_binary_op " " rel_expr[*] | !1 *8 rel_term[*]
+rel_term = *6 rel_unary_op rel_term[*] |
+    !1 *16 any_id[*] |
+    *10 expr[*] " " rel_binary_op " " expr[*] |
+    *2 "(" rel_expr[*] ")"
+
+any_id[] = 0
+any_id[(?P<xs>[\w\[\]+ ]+)] xs=~?" ":[(?P<x>[\w\[\]+]+)] = x
+
+any_scalar_id[] = 0
+any_scalar_id[(.* )?(?P<x>\w+)( .*)?] = x
+any_scalar_id[(?:\w+\[[\w+]+\]+ ?)+] = 0
+
+sub_id[(?P<x>[\w\[\]+]+) +(?P=x)] = 0
+sub_id[(?P<x>[\w\[\]+]+) +(?P<xs>.*)] xs!~[(.* )?(?P=x)(?: .*)?] = xs
+sub_id[(?P<x>[\w\[\]+]+) +(?P<xs>[\w\[\]+ ]*[\w\[\]+]) +(?P=x)] = sub_id[x" "xs]
+sub_id[(?P<x>[\w\[\]+]+) +(?P=x) +(?P<xs>.*)] = sub_id[x" "xs]
+sub_id[(?P<x>[\w\[\]+]+) +(?P<xs1>[\w\[\]+ ]*[\w\[\]+]) +(?P=x) +(?P<xs2>.*)] = sub_id[x" "xs1]" "sub_id[x" "xs2]
+
+sub_ids[\s*:\s*(?P<rest>.*)] = rest
+sub_ids[\s*(?P<x>[\w\[\]+]+)\s*(?P<xs1>[^:]*):\s*(?P<xs2>[^:]*)] = sub_ids[xs1":"sub_id[x" "xs2]]
+
+# operationis
+assign_op = *24 "=" | *8 "+=" | *4 "-=" | "*=" | "|=" | "&=" | "^="
+binary_op = *24 "+" | *12 "-" | *20 "*" | "|" | "&" | "^"
+
+rel_binary_op = "<" | ">" | "==" | "<=" | ">=" | "!="
+log_binary_op = "||" | "&&"
+
+unary_op = "-" | "(" type ")"
+
+rel_unary_op = "!"
+
+# integer number
+int = *10 dec_int | hex_int | oct_int
+
+dec_int = *99 first_dec_digit digits | "0"
+digits = digit digits | *10 0
+
+hex_int = "0x" hex_digit hex_digits
+hex_digits = hex_digit hex_digits | *10 0
+
+oct_int = "0" oct_digit oct_digits
+oct_digits = oct_digit oct_digits | *10 0
+
+# declarations of variables
+id_decl[] = 0
+id_decl[(?P<x>\w+) ?(?P<xs>.*)] =
+    type " " x " = " int ";"
+    id_decl[xs]
+
+arr_decl[] = 0
+arr_decl[(?P<x>\w+) ?(?P<xs>.*)] =
+    type " " x "[20] = {" int "};"
+    arr_decl[xs]
+
+# make assignment x = expr[xs]: (x:xs)
+id_assign[] = 0
+id_assign[:.*] = 0
+id_assign[(?P<x>[\w\[\]+]+) ?(?P<xs>[\w\[\]+ ]*:(?P<rxs>[\w\[\]+ ]*))] =
+    x " "assign_op" " expr[rxs] ";"
+    id_assign[xs]
+
+arr_inst[(?P<i>[\w+]+) (?P<a>\w+) (?P<xs>[\w ]+)] = a"["i"]" " " arr_inst[i" "xs]
+arr_inst[(?P<i>[\w+]+) (?P<a>\w+)] = a"["i"]"
+arr_inst[(?P<i>[\w+]+) ] = 0
+
+block[(?P<globals>[^|]*)\|] =
+    "{"
+        statements[globals]
+    "}"
+    ""
+
+block[(?P<globals>[^|]*)\|(?P<locals>.+)] globals=~[(?P<lxs>[\w\[\]+ ]*):(?P<rxs>[\w\[\]+ ]*)@(?P<as>[\w ]*)@(?P<is>[\w ]*)] =
+    "{"
+        id_decl[locals]
+        statements[lxs" "locals":"rxs" "locals"@"as"@"is]
+    "}"
+    ""
+
+array_index[] = first_dec_digit
+array_index[(?P<i>\w+)] = i | i "+" first_dec_digit
+
+for_low[] = digit
+for_low[(?P<i>\w+)] = i | digit
+for_high[] = digit
+for_high[(?P<i>\w+)] = i | digit
+for_inc[] = "++" | "+= " first_dec_digit
+for_inc[(?P<i>\w+)] = "+= " i
+
+for_cycle[:.*] = 0
+for_cycle[\w+:.*] = for_cycle_const_step[*]
+
+for_cycle_const_step[(?P<i>\w+):(?P<lxs>[^:]*):(?P<rxs>[^@]*)@(?P<as>[\w ]*)@(?P<is>[\w ]*)] =
+    "for ( "i" = "for_low[any_id[is]]"; "i" <= "for_high[any_id[is]]"; "i" "for_inc" )"
+    block[ sub_ids[i":"lxs]" "arr_inst[array_index[i]" "as]":"rxs" "arr_inst[array_index[i]" "as]"@"as"@"is" "i"|"sub_ids[as" "is" "i":"small_ids] ]
+
+if_part[(?P<lxs>[^:]*):(?P<rxs>[^@]*)@(?P<as>[\w ]*)@(?P<is>[\w ]*)] =
+    "if ( " rel_expr[rxs] " )"
+    block[ lxs":"rxs"@"as"@"is"|"sub_ids[as" "is":"small_ids] ]
+
+else_part[(?P<lxs>[^:]*):(?P<rxs>[^@]*)@(?P<as>[\w ]*)@(?P<is>[\w ]*)] =
+    "else"
+    block[ lxs":"rxs"@"as"@"is"|"sub_ids[as" "is":"small_ids] ]
+
+if_stmt = if_part[*] | if_part[*] else_part[*]
+
+sub_index[(?P<all>:.*)] = all
+sub_index[(?P<i>\w+):(?P<is>.*)] = i":"sub_id[i" "is]
+
+statement[:] = 0
+statement[:(?P<rxs>[^@]*)] = print_list[ any_id[rxs] ]
+statement[(?P<lxs>[\w\[\]+ ]*):(?P<rxs>[\w\[\]+ ]*)@(?P<as>[\w ]*)@\s*(?P<is>[\w ]*)] = *16 id_assign[ any_id[lxs] ":" rxs ] | #*6 print_list[ any_id[rxs] ] |
+    *6 for_cycle[ sub_index[any_scalar_id[lxs]":"lxs]":"rxs"@"as"@"is ] |
+    *5 if_stmt[ lxs":"rxs"@"as"@"is ]
+
+statements = *3 statement[*] statements[*] | 0
+
+print_list[] = 0
+print_list[(?P<x>[\w\[\]+]+) ?(?P<xs>.*)] =
+    "print_int( " x " );"
+    print_list[xs]
+
+print_arr[] = 0
+print_arr[(?P<a>[\w\[\]+]+) ?(?P<as>[\w\[\]+ ]*)] =
+    "print_int( "a" );"
+    print_arr[as]
+
+print_arr_list[] = 0
+print_arr_list[(?P<x>\w+) ?(?P<as>[\w ]*)] =
+    "for (" x " = 0; "x" < 20; "x"++ )"
+    "{"
+        print_arr[arr_inst[x" "as]]
+    "}"
+
+# sets
+ids = { sep=" ", min=8, max=8 } id
+small_ids = { sep=" ", min=0, max=5 } id
+
+array_ids = { sep=" ", min=8, max=8 } id
+
+int_set = { sep=" ", min=5, max=10 } dec_int
+
+# identifier
+id = first_id_symbol id_symbols
+
+# reserved keywords
+id -= "asm|auto|break|case|char|const|continue|default|double|do|else"
+id -= "enum|extern|float|for|goto|if|inline|int|long|register"
+id -= "restrict|return|short|signed|sizeof|static|struct|switch|typedef|union"
+id -= "unsigned|void|volatile|while|_Bool|_Complex|_Imaginary"
+id -= "main|swap_int|print_int"
+
+first_id_symbol = *52 letter  | "_"
+id_symbols = id_symbol id_symbols | *4 0
+id_symbol = *26 letter  | *1 "_" | *10 digit
+letter = small_letter
+small_letter = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" |
+            "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" |
+            "u" | "v" | "w" | "x" | "y" | "z"
+capital_letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" |
+                 "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" |
+                 "U" | "V" | "W" | "X" | "Y" | "Z"
+
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+first_dec_digit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+hex_digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
+            "a" | "b" | "c" | "d" | "e" | "f"
+oct_digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+
