@@ -8,19 +8,16 @@ array-size ::= mul(max-loop-len(), 3)
 ####################################################################################################
 
 program @
-  globals = glob-var-set(randint(0, 10)),
+  accs    = acc-set(),
   # number of arrays to generate for each array dimension
-  asn     = (randint(2,3), randint(0,2), randint(0,1)),
-  # number of functions to generate for each function arity
   fsn     = (randint(0,2), randint(0,5), randint(0,3), randint(0,3)),
-  as      = arr-set(asn), # generate array names according to already genererated numbers
+  as      = (), # No global array is used
   fs      = shuffle(fun-set(fsn)), # generate function names acording to already genererated numbers
   locals  = var-set(randint(1, 4)), # function main locals
-  vars    = cat(locals, globals),   # there should be at least one variable
+  vars    = locals,   # there should be at least one variable
   ivs     = (), # names of variables used for array indices
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
   ctx     = (vars:vars:as:ivs:fs:0:():0:())
-  ?  is-list(front(as))
 ::= {
   "// This is C++" # This comment is needed for testgen harness, so it can treat this source as C++
   "#if defined(REFRUN)"
@@ -41,31 +38,33 @@ program @
   "  #define CEAN_FOOTER3"
   "#endif"
   "#include \"libcpp.h\""
+  "#include \"kernel.hpp\""
   "#include <CL/sycl.hpp>"
   ""
   list-lines(fs, decl-fun)
   "template <typename T, int dims, cl::sycl::access::mode mode,"
-  "         cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
+  "        cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
   "void kernel(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
   "{"
-    declarations(locals, globals)
+    list-lines(as, decl-arr)
+    declarations(locals, accs)
     statements(ctx)
     for-clause(ctx)
     statements(ctx)
   "}"
-  fun-defs(fs, globals, as, fs)
+  fun-defs(fs, as, fs)
 }
 
-fun-defs () _ _ _ ::= ""
-fun-defs f:l globals as fs @
+fun-defs () _ _ ::= ""
+fun-defs f:l as fs @
   (fname:ftype:fsig:_) = f,
   params  = var-set(len(fsig)),
-  vars    = cat(params, globals),
+  vars    = params,
   ivs     = (),
   new-ctx = (params:vars:as:ivs:l:1:():0:())
 ::= {
   ftype " " fname "(" named-fun-sig(fsig, params) ") " block(new-ctx)
-  fun-defs(l, globals, as, fs) }
+  fun-defs(l, as, fs) }
 
 named-fun-sig () () ::= ""
 named-fun-sig ftype:() param:() ::= ftype " " param
@@ -77,7 +76,6 @@ named-fun-sig ftype:ftypes param:params ::= ftype " " param ", " named-fun-sig(f
 
 declaration x values @ new-ctx = (():values:():():():0:():0:())
 ::= *100 type() " " x " = " expr(new-ctx) ";"
-  |      "volatile " type() " " x " = " expr(new-ctx) ";"
 
 declarations () _ ::= ""
 declarations x:xs values
@@ -479,7 +477,7 @@ expr-term ctx
 ::= *24 int()
   | *24 rvalint(ctx)
   | *2 unary-op() " " expr-term(ctx)
-  | *2 try-fun-call(ctx)
+  | *24 try-fun-call(ctx)
   | *1 "(" expr(ctx) ")"
   | *1 "(" expr(ctx) ", " expr(ctx) ")"
   | *1 "(" cond(ctx) " ? " expr(ctx) " : " expr(ctx) ")"
@@ -603,8 +601,7 @@ decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) "
 ####################################################################################################
 # sets                                                                                             #
 #################################################################################################### 
-
-glob-var-set n     ::= set-gen(glob-var, (), n)
+acc-set            ::= set-gen(acc, (), 1)
 var-set n          ::= set-gen(var, (), n)
 int-set n          ::= set-gen(int, (), n)
 arr-set l          ::= arr-set2(l, 1)
@@ -651,8 +648,7 @@ getn l _ ::= ()
 ####################################################################################################
 # some basic stuff                                                                                 #  
 ####################################################################################################
-
-glob-var _ ::= "g_" int() | *1000 "g_" identifier()
+acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
 int _      ::= int()
 arr dim    ::= "a" dim "_" int(), dim | *1000 "a" dim "_" identifier(), dim
@@ -678,3 +674,4 @@ letter
 ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
   | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t"
   | "u" | "v" | "w" | "x" | "y" | "z"
+
