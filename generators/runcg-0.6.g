@@ -41,22 +41,17 @@ program @
   "  #define CEAN_FOOTER3"
   "#endif"
   "#include \"libcpp.h\""
-  "#include <CL\/sycl.hpp>"
+  "#include <CL/sycl.hpp>"
   ""
-  const-declarations(globals, ())
-  list-lines(as, decl-arr)
   list-lines(fs, decl-fun)
-  "int main()"
+  "template <typename T, int dims, cl::sycl::access::mode mode,"
+  "         cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
+  "void kernel(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
   "{"
     declarations(locals, globals)
     statements(ctx)
     for-clause(ctx)
     statements(ctx)
-    list-lines(vars, print-int)
-    list-lines(as, print-arr)
-    #print-arr(any(as))
-    "flushprintb();"
-    "return 0;"
   "}"
   fun-defs(fs, globals, as, fs)
 }
@@ -90,12 +85,6 @@ declarations x:xs values
   declaration(x, values)
   declarations(xs, (x:values)) }
 
-const-declarations () _ ::= ""
-const-declarations x:xs values
-::= {
-  declaration(x, values)
-  const-declarations(xs, values) }
-
 ####################################################################################################
 # statements                                                                                       #
 ####################################################################################################
@@ -109,7 +98,6 @@ statement ctx
   | *20  for-clause(ctx)
   | *10  if-clause(ctx)
   | *5   block(ctx)
-  | *5   print-stmt(ctx)
   | *5   swap-stmt(ctx)
   | *5   switch-clause(ctx) # until DPD200136238 is fixed (FIXED)
   | *2   break-stmt(ctx)
@@ -117,15 +105,6 @@ statement ctx
 #  | *2   try-catch-stmt(ctx)
 #  | *2   throw-stmt(ctx)
   | *1   return-stmt(ctx)
-  | *1   print-any-arr(ctx)
-
-print-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(isrval(ctx), neq(ret, 1))
-::= print-int(rval(ctx))
-print-stmt _ ::= "; /* print rval statement was omited here */"
-
-print-any-arr ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), and(le(len(ivs), 1), neq(ret, 1)))
-::= print-arr(any(as))
-print-any-arr ctx ::= "; /* array print skipped due to high nesting */"
 
 swap-stmt ctx ? islval(ctx) ::= "swap( " lval(ctx) ", " lval(ctx) " );"
 swap-stmt _ ::= "; /* lvalue swap could be here */"
@@ -478,7 +457,6 @@ switch-case n ctx
       statements(ctx)
       "break;" }
 
-print-int x ::= "printb( " x " );"
 
 ####################################################################################################
 # expressions                                                                                      #
@@ -611,19 +589,6 @@ ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 decl-arr a @ (aname:adim:_) = a ::= type() " " aname decl-arr2(adim) ";"
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
-
-#print-arr a @ (aname:adim:_) = a ::= "print(&" aname print-arr2(adim) print-arr3(adim) ");"
-#print-arr2 0 ::= ""
-#print-arr2 adim ::= "[0]" print-arr2(sub(adim, 1))
-#print-arr3 0 ::= ""
-#print-arr3 adim ::= ", " array-size() print-arr3(sub(adim, 1))
-
-print-arr a @ (aname:adim:_) = a ::= print-arr2(adim) "printb(" aname print-arr3(adim) ");"
-print-arr2 0 ::= ""
-print-arr2 adim
-::= "for (int i" adim " = 0; i" adim " != " array-size() "; ++ i" adim ") " print-arr2(sub(adim, 1))
-print-arr3 0 ::= ""
-print-arr3 adim ::= "[i" adim "]" print-arr3(sub(adim, 1))
 
 try-fun-call ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(fs), 0) ::= fun-call(any(fs), ctx)
 try-fun-call _ ::= int()
