@@ -38,7 +38,6 @@ program @
   "  #define CEAN_FOOTER3"
   "#endif"
   "#include \"libcpp.h\""
-  "#include \"kernel.hpp\""
   "#include <CL/sycl.hpp>"
   ""
   list-lines(fs, decl-fun)
