@@ -40,12 +40,12 @@ program @
   "#include \"libcpp.h\""
   "#include <CL/sycl.hpp>"
   ""
+  list-lines(as, decl-arr)
   list-lines(fs, decl-fun)
   "template <typename T, int dims, cl::sycl::access::mode mode,"
   "        cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
   "void kernel(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
   "{"
-    list-lines(as, decl-arr)
     declarations(locals, accs)
     statements(ctx)
     for-clause(ctx)
@@ -151,12 +151,16 @@ statements ctx
 block ctx @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
   locals = diff(var-set(randint(0,4)), rv),
+  local-asn = (randint(0,2), randint(0,0), randint(0,0)),
+  local-as = diff(arr-set(local-asn), rv),
   new-lv = union(lv, locals),
   new-rv = union(rv, locals),
-  new-ctx = (new-lv:new-rv:as:ivs:fs:ret:():0:()),
-  new-ctx-throw = (new-lv:new-rv:as:ivs:fs:ret:():1:())
+  new-as = union(as, local-as),
+  new-ctx = (new-lv:new-rv:new-as:ivs:fs:ret:():0:()),
+  new-ctx-throw = (new-lv:new-rv:new-as:ivs:fs:ret:():1:())
 ::= *5 {
   "{"
+    list-lines(local-as, decl-arr)
     declarations(locals, rv)
     statement(new-ctx)
     statement(new-ctx)

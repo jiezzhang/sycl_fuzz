@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   fuzz_selector selector(platform_name, device_name);
 
   const int dim = 1024;
-  const int local_dim = 64;
+  const int local_dim = 8;
   std::vector<ulong> result(dim);
 
   {
