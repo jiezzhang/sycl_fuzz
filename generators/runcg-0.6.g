@@ -14,7 +14,7 @@ program @
   as      = (), # No global array is used
   fs      = shuffle(fun-set(fsn)), # generate function names acording to already genererated numbers
   locals  = var-set(randint(1, 4)), # function main locals
-  vars    = locals,   # there should be at least one variable
+  vars    = union(locals, accs),   # there should be at least one variable
   ivs     = (), # names of variables used for array indices
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
   ctx     = (vars:vars:as:ivs:fs:0:():0:())
@@ -95,7 +95,7 @@ statement ctx
   | *20  for-clause(ctx)
   | *10  if-clause(ctx)
   | *5   block(ctx)
-  | *5   swap-stmt(ctx)
+#  | *5   swap-stmt(ctx)
   | *5   switch-clause(ctx) # until DPD200136238 is fixed (FIXED)
   | *2   break-stmt(ctx)
   | *2   continue-stmt(ctx)
@@ -103,11 +103,11 @@ statement ctx
 #  | *2   throw-stmt(ctx)
   | *1   return-stmt(ctx)
 
-swap-stmt ctx ? islval(ctx) ::= "swap( " lval(ctx) ", " lval(ctx) " );"
-swap-stmt _ ::= "; /* lvalue swap could be here */"
+#swap-stmt ctx ? islval(ctx) ::= "swap( " lval(ctx) ", " lval(ctx) " );"
+#swap-stmt _ ::= "; /* lvalue swap could be here */"
 
 return-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? eq(ret, 1) ::= "return " expr(ctx) ";"
-return-stmt _ ::= "; /* return statement was omited here */"
+return-stmt _ ::= ""
 
 break-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(ivs), 0) ::= "break;"
 break-stmt _ ::= "; /* break statement was omited here */"
@@ -532,8 +532,8 @@ binary-op
 ::= *20 "+"
   | *8  "-"
   | *6  "*"
-  |     "|"
-  |     "&"
+#  |     "|"
+#  |     "&"
   |     "^"
   |     relation-op()
   |     logical-op()
@@ -555,9 +555,11 @@ assign-op
   |    "+="
   |    "-="
   |    "*="
-  |    "&="
-  |    "|="
-  |    "^="
+#  |    "&="
+#  |    "|="
+#  |    "^="
+
+#disable most binary operators
 
 ####################################################################################################
 # manipulations with arrays and functions                                                          # 
@@ -571,7 +573,7 @@ list-lines i:l foo
 
 ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
-ivs-val2 adim ctx ::= "[" ivs-val3(ctx) "]" ivs-val2(sub(adim, 1), ctx)
+ivs-val2 adim ctx ::= "[" "(size_t)(" ivs-val3(ctx) ")]" ivs-val2(sub(adim, 1), ctx)
 ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 ::= *20 any(ivs)
   | any(ivs) "+" randint(1, mul(max-loop-len(), 2))
@@ -664,12 +666,45 @@ int ::= str(randint(1,max-int()))
 max-int ::= 100
 
 type
-::= *24 "unsigned int"
-  | *4  "unsigned long"
-  | *2  "unsigned long long"
-  | *1  "unsigned short"
-  | *2  "unsigned char"
-#  | *100 "unsigned __int128" # until DPD200172494 is fixed: internal error: #04010002_1800: IL0 bad rel arith: I128/SI128 (proton/npcg/il0_trans.c, line 8136)
+::= *100 scalar_type()
+#  | *50  vec_type()
+
+scalar_type
+::= cpp_type()
+  | unsigned_cpp_type()
+  | cl_type()
+  | float_type()
+  | unsigned_cl_type()
+
+cpp_type
+::= *24 "int"
+  | *4  "long"
+  | *2  "long long"
+  | *1  "short"
+  | *2  "char"
+
+unsigned_cpp_type
+::= "unsigned " cpp_type()
+
+cl_type
+::= *24 "cl::sycl::cl_char"
+  | *2  "cl::sycl::cl_short"
+  | *2  "cl::sycl::cl_int"
+  | *2  "cl::sycl::cl_long"
+
+
+unsigned_cl_type
+::= *24 "cl::sycl::cl_uchar"
+  | *2  "cl::sycl::cl_ushort"
+  | *2  "cl::sycl::cl_uint"
+  | *2  "cl::sycl::cl_ulong"
+
+float_type
+::= "float"
+  | "double"
+  | "cl::sycl::cl_double"
+  | "cl::sycl::cl_half"
+  | "cl::sycl::cl_float"
 
 identifier ::= letter() letters()
 letters ::= *4 letter() letters() | *2 ""
