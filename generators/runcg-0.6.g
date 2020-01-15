@@ -17,7 +17,7 @@ program @
   vars    = union(locals, accs),   # there should be at least one variable
   ivs     = (), # names of variables used for array indices
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
-  ctx     = (vars:vars:as:ivs:fs:0:():0:())
+  ctx     = (vars:vars:as:ivs:fs:"void":():0:())
 ::= {
   "// This is C++" # This comment is needed for testgen harness, so it can treat this source as C++
   "#if defined(REFRUN)"
@@ -60,21 +60,27 @@ fun-defs f:l as fs @
   params  = var-set(len(fsig)),
   vars    = params,
   ivs     = (),
-  new-ctx = (params:vars:as:ivs:l:1:():0:())
+  new-ctx = (params:vars:as:ivs:l:ftype:():0:())
 ::= {
   ftype " " fname "(" named-fun-sig(fsig, params) ") " block(new-ctx)
   fun-defs(l, as, fs) }
 
 named-fun-sig () () ::= ""
-named-fun-sig ftype:() param:() ::= ftype " " param
-named-fun-sig ftype:ftypes param:params ::= ftype " " param ", " named-fun-sig(ftypes, params)
+named-fun-sig ftype:() param:() @
+  (param-var, param-type) = param
+::= ftype " " param-var
+named-fun-sig ftype:ftypes param:params @
+  (param-var, param-type) = param
+::= ftype " " param-var ", " named-fun-sig(ftypes, params)
 
 ####################################################################################################
 # declarations                                                                                     # 
 ####################################################################################################
 
-declaration x values @ new-ctx = (():values:():():():0:():0:())
-::= *100 type() " " x " = " expr(new-ctx) ";"
+declaration x values @ 
+  new-ctx = (():values:():():():"void":():0:()),
+  (variable, var-type) = x
+::= *100 var-type " " variable " = " expr(new-ctx) ";"
 
 declarations () _ ::= ""
 declarations x:xs values
@@ -87,8 +93,7 @@ declarations x:xs values
 ####################################################################################################
 
 statement ctx
-::=  ";"
-  | *100 lv-assign(ctx)
+::=  *100 lv-assign(ctx)
 #  | *100 cean-lv-assign(ctx) # until DPD200285292 is fixed
 #  | *20  cilk-spawn-lv-assign(ctx) # until DPD200181746 is fixed
 #  | *20  cean-if-clause(ctx) # until DPD200285292 is fixed
@@ -106,7 +111,7 @@ statement ctx
 #swap-stmt ctx ? islval(ctx) ::= "swap( " lval(ctx) ", " lval(ctx) " );"
 #swap-stmt _ ::= "; /* lvalue swap could be here */"
 
-return-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? eq(ret, 1) ::= "return " expr(ctx) ";"
+return-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(ret, "void") ::= "return " expr(ctx) ";"
 return-stmt _ ::= ""
 
 break-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(ivs), 0) ::= "break;"
@@ -187,7 +192,7 @@ lv-assign ctx ? islval (ctx)
 lv-assign _ ::= "; /* lvalue change could be here */"
 
 islval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
-::= or(neq(len(lv), 0), and(neq(len(as),0), and(neq(len(ivs), 0), neq(ret, 1))))
+::= or(neq(len(lv), 0), and(neq(len(as),0), and(neq(len(ivs), 0), eq(ret, "void"))))
 
 lval ctx ? not(islval(ctx)) ::= "ERROR!!!"
 
@@ -196,10 +201,10 @@ lval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(lv), 0)
   |    lval2(ctx)
 lval ctx ::= lval2(ctx)
 
-lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 any(lv)
+lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 anyVar(lv)
 
-lval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), and(neq(len(ivs), 0), neq(ret, 1)))
-::= ivs-val(any(as), ctx)
+lval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), and(neq(len(ivs), 0), eq(ret, "void")))
+::= ivs-val(anyVar(as), ctx)
 lval2 ctx ::= lval1(ctx)
 
 # CEAN
@@ -207,14 +212,14 @@ lval2 ctx ::= lval1(ctx)
 isarr ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
 ::= neq(len(as), 0)
 
-cean-lv-assign ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(isarr(ctx), neq(ret, 1))
+cean-lv-assign ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(isarr(ctx), eq(ret, "void"))
 ::= cean-lv-assign2(ctx)
 
 cean-lv-assign _ ::= "; /* CEAN lvalue change could be here */"
 
 cean-lv-assign2 ctx
  @ (lv:rv:as:ivs:fs:ret:old-caf:throw:_) = ctx,
-   ca = any(as),
+   ca = anyVar(as),
    (aname:adim:_) = ca,
    caf = cean-form(randint(1, adim)),
    new-as = diff(as,(ca:())),
@@ -258,7 +263,7 @@ cean-if-clause _ ::= "; /* CEAN if could be here */"
 
 cean-if-clause2 ctx
  @ (lv:rv:as:ivs:fs:ret:old-caf:throw:_) = ctx,
-   ca = any(as),
+   ca = anyVar(as),
    (aname:adim:_) = ca,
    caf = cean-form(randint(1, adim)),
    (cas, cvals) = cean-vals(ca, caf, ctx),
@@ -373,21 +378,21 @@ cilk-spawn-lv-assign2 ctx
 
 cilk-spawn-lv-assign2b ctx
   @ (lv:rv:as:ivs:fs:ret:caf:throw:_) = ctx,
-    i=any(lv),
+    i=anyVar(lv),
     new-ctx = (diff(lv,(i,)):diff(rv,(i,)):as:ivs:fs:ret:caf:throw:())
 ::= {
   i " = _Cilk_spawn "  fun-call(any(fs), ctx) ";"
   statement(new-ctx)
   "_Cilk_sync;" }
 
-cilk-spawn-lv-assign3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx ? and(isarr(ctx), and(neq(len(ivs), 0), neq(ret, 1))) 
+cilk-spawn-lv-assign3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx ? and(isarr(ctx), and(neq(len(ivs), 0), eq(ret, "void"))) 
 ::= cilk-spawn-lv-assign3b ctx
 
 cilk-spawn-lv-assign3 ctx ::= cilk-spawn-lv-assign2(ctx) 
 
 cilk-spawn-lv-assign3b ctx
   @ (lv:rv:as:ivs:fs:ret:caf:throw:_) = ctx,
-    a = any(as),
+    a = anyVar(as),
     new-ctx = (lv:rv:diff(as,(a,)):ivs:fs:ret:caf:throw:())
 ::= {
   ivs-val(a, ctx) " = _Cilk_spawn "  fun-call(any(fs), ctx) ";"
@@ -403,8 +408,8 @@ max-lim     ::= sub(max-loop-len(), 1)
 mid-lim     ::= div(max-loop-len(), 2)
 low-lim ()  ::= min-lim() | randint(min-lim(), mid-lim())
 big-lim ()  ::= max-lim() | randint(mid-lim(), max-lim())
-low-lim ivs ::= any(ivs) | min-lim() | randint(min-lim(), mid-lim())
-big-lim ivs ::= any(ivs) | max-lim() | randint(mid-lim(), max-lim())
+low-lim ivs ::= anyVar(ivs) | min-lim() | randint(min-lim(), mid-lim())
+big-lim ivs ::= anyVar(ivs) | max-lim() | randint(mid-lim(), max-lim())
 step-pos i  ::= i " += " randint(1,8) | *4 i "++" | *4 "++" i
 step-neg1 i ::= i "--" | "--" i
 step-neg i  ::= i " -= " randint(1,8) | *8 step-neg1(i)
@@ -413,7 +418,7 @@ for-clause (():_) ::= "; /* for-cycle skipped due to no free lvals variables */"
 
 for-clause ctx @
   (lv:rv:as:ivs:fs:ret:old_caf:throw:_) = ctx,
-  i       = any(lv),
+  i       = anyVar(lv),
   new-lv  = diff(lv,(i,)),
   new-ivs = (i:ivs),
   new-ctx = (new-lv:rv:as:new-ivs:fs:ret:():throw:())
@@ -449,12 +454,13 @@ switch-cases (n:l) ctx
   switch-case(n, ctx)
   switch-cases(l, ctx) }
 
-switch-case n ctx
+switch-case n ctx @
+  (n-val, n-type) = n
 ::= {
-    "case " n ": "
+    "case " n-val ": "
       statements(ctx) }
   | {
-    "case " n ": "
+    "case " n-val ": "
       statements(ctx)
       "break;" }
 
@@ -506,12 +512,12 @@ rval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
 rval ctx ::= rval2(ctx)
 
 rval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
-::= *100 any(rv)
-  | "copy(" any(rv) ")"
+::= *100 anyVar(rv)
+  | "copy(" anyVar(rv) ")"
 
 rval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), neq(len(ivs), 0))
-::= *20 ivs-val(any(as), ctx) 
-  | "copy(" ivs-val(any(as), ctx) ")"
+::= *20 ivs-val(anyVar(as), ctx) 
+  | "copy(" ivs-val(anyVar(as), ctx) ")"
 rval2 ctx ::= rval3(ctx)
 
 rval3 ctx @ cas = cean-get-new-as(ctx) ? neq(len(cas), 0)
@@ -575,21 +581,24 @@ ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
 ivs-val2 adim ctx ::= "[" "(size_t)(" ivs-val3(ctx) ")]" ivs-val2(sub(adim, 1), ctx)
 ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
-::= *20 any(ivs)
-  | any(ivs) "+" randint(1, mul(max-loop-len(), 2))
-  | randint(max-loop-len(), sub(array-size(), 1)) "-" any(ivs)
-  | any(ivs) "+" any(ivs)
-  | randint(max-loop-len(), mul(max-loop-len(), 2)) "+" any(ivs) "-" any(ivs)
-  | "2*" any(ivs)
-  | "2*" any(ivs) "+" any(ivs)
-  | max-loop-len() "+2*" any(ivs) "-" any(ivs)
-  | "3*" any(ivs)
-  | randint(mul(max-loop-len(), 2), sub(array-size(), 1)) "-2*" any(ivs)
-  | sub(array-size(), 1) "-3*" any(ivs)
+::= *20 anyVar(ivs)
+  | anyVar(ivs) "+" randint(1, mul(max-loop-len(), 2))
+  | randint(max-loop-len(), sub(array-size(), 1)) "-" anyVar(ivs)
+  | anyVar(ivs) "+" anyVar(ivs)
+  | randint(max-loop-len(), mul(max-loop-len(), 2)) "+" anyVar(ivs) "-" anyVar(ivs)
+  | "2*" anyVar(ivs)
+  | "2*" anyVar(ivs) "+" anyVar(ivs)
+  | max-loop-len() "+2*" anyVar(ivs) "-" anyVar(ivs)
+  | "3*" anyVar(ivs)
+  | randint(mul(max-loop-len(), 2), sub(array-size(), 1)) "-2*" anyVar(ivs)
+  | sub(array-size(), 1) "-3*" anyVar(ivs)
 # nexted expressions can't have CEAN form
   | "((unsigned int)(" expr((lv:rv:as:ivs:fs:ret:():0:())) "))%" array-size()
 
-decl-arr a @ (aname:adim:_) = a ::= type() " " aname decl-arr2(adim) ";"
+decl-arr a @ 
+  (array,array-type) = a,
+  (aname, adim) = array
+::= array-type " " aname decl-arr2(adim) ";"
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 
@@ -606,9 +615,9 @@ decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) "
 ####################################################################################################
 # sets                                                                                             #
 #################################################################################################### 
-acc-set            ::= set-gen(acc, (), 1)
-var-set n          ::= set-gen(var, (), n)
-int-set n          ::= set-gen(int, (), n)
+acc-set            ::= set-gen(acc, global_acc_type, (), 1)
+var-set n          ::= set-gen(var, type, (), n)
+int-set n          ::= set-gen(int, integer_type, (), n)
 arr-set l          ::= arr-set2(l, 1)
 arr-set2 () _      ::= ()
 arr-set2 n:l dim   ::= cat(arr-set-gen(dim, n), arr-set2(l, add(dim, 1)))
@@ -617,13 +626,15 @@ fun-set l          ::= fun-set2(l, 0)
 fun-set2 () _      ::= ()
 fun-set2 n:l arity ::= cat(fun-set-gen(arity, n), fun-set2(l, add(arity, 1)))
 
-set-gen _ _ 0 ::= ()
-set-gen genf genf_in n @
-  l = set-gen(genf, genf_in, sub(n, 1)),
-  i = set-uniq(genf(genf_in,), l, genf, genf_in)
+set-gen _ _ _ 0 ::= ()
+set-gen genf type_foo genf_in n @
+  l = set-gen(genf, type_foo, genf_in, sub(n, 1)),
+  i = set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 ::= i:l
-set-uniq i l genf genf_in ? in(i, l) ::= set-uniq(genf(genf_in,), l, genf, genf_in)
-set-uniq i _ _ _ ::= i
+set-uniq i type_foo l genf genf_in ? in(i, l) ::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
+set-uniq i type_foo _ _ _ @
+  var-type = type_foo()
+::= (i, var-type)
 
 # WTF? genf(genf_in,) converts list into a string???
 arr-set-gen _ 0 ::= ()
@@ -632,7 +643,9 @@ arr-set-gen dim n @
   i = arr-set-uniq(arr(dim), l, dim)
 ::= i:l
 arr-set-uniq i l dim ? in(i, l) ::= arr-set-uniq(arr(dim), l, dim)
-arr-set-uniq i _ _ ::= i
+arr-set-uniq i _ _ @
+  arr-type = type()
+::= (i, arr-type)
 
 fun-set-gen _ 0 ::= ()
 fun-set-gen arity n @
@@ -670,10 +683,13 @@ type
 #  | *50  vec_type()
 
 scalar_type
+::= integer_type()
+  | float_type()
+
+integer_type
 ::= cpp_type()
   | unsigned_cpp_type()
   | cl_type()
-  | float_type()
   | unsigned_cl_type()
 
 cpp_type
@@ -705,6 +721,9 @@ float_type
   | "cl::sycl::cl_double"
   | "cl::sycl::cl_half"
   | "cl::sycl::cl_float"
+
+global_acc_type
+::= "unsigned long"
 
 identifier ::= letter() letters()
 letters ::= *4 letter() letters() | *2 ""

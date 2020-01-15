@@ -18,6 +18,7 @@ class Builtins:
             'head'      : self.head,
             'tail'      : self.tail,
             'any'       : self.any,
+            'anyVar'    : self.anyVar,
             'join'      : self.join,
             'split'     : self.split,
             'len'       : self.length,
@@ -152,6 +153,16 @@ class Builtins:
         """ return any element of a list """
         self.check(self.any.func_name,args,1,[list])
         try: return random.choice(args[0])
+        except IndexError, ie:
+            self.runtimeError(
+                "any called upon an empty list" )
+    
+    def anyVar(self, args):
+        """ return any element of a list """
+        self.check(self.anyVar.func_name,args,1,[list])
+        try: 
+            var = random.choice(args[0])
+            return var[0]
         except IndexError, ie:
             self.runtimeError(
                 "any called upon an empty list" )
