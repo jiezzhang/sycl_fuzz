@@ -17,7 +17,7 @@ program @
   vars    = union(locals, accs),   # there should be at least one variable
   ivs     = (), # names of variables used for array indices
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
-  ctx     = (vars:vars:as:ivs:fs:"void":():0:())
+  ctx     = (vars:vars:as:ivs:fs:"void":():0:())  
 ::= {
   "// This is C++" # This comment is needed for testgen harness, so it can treat this source as C++
   "#if defined(REFRUN)"
@@ -184,10 +184,12 @@ block ctx @
 #  "}" }
 
 # assignment
-lv-assign ctx ? islval (ctx)
-::= *10 lval(ctx) " " assign-op() " " expr(ctx) ";"
-  | *1  "++" lval(ctx) ";"
-  | *1  lval(ctx) "++;"
+lv-assign ctx @
+  lv = lval(ctx),
+  (lv-exp, lv-type) = lv
+? islval (ctx)
+::= *10 lv-exp " " assign-op() " " expr(ctx) ";"
+  | *2  plusplus(ctx) ";"
 
 lv-assign _ ::= "; /* lvalue change could be here */"
 
@@ -201,11 +203,21 @@ lval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(lv), 0)
   |    lval2(ctx)
 lval ctx ::= lval2(ctx)
 
-lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 anyVar(lv)
+lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 any(lv)
 
 lval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), and(neq(len(ivs), 0), eq(ret, "void")))
-::= ivs-val(anyVar(as), ctx)
+::= lval3(ctx)
 lval2 ctx ::= lval1(ctx)
+lval3 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx,
+  new-arr = any(as),
+  (arr-name, arr-type) = new-arr
+::= (ivs-val(arr-name, ctx), arr-type)
+
+plusplus ctx ? not(islval(ctx)) ::= "ERROR!!!"
+
+plusplus ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx 
+::= anyVarTypes(lv, scalar_type_sets()) "++"
+  | "++" anyVarTypes(lv, scalar_type_sets())
 
 # CEAN
 
@@ -732,3 +744,10 @@ letter
   | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t"
   | "u" | "v" | "w" | "x" | "y" | "z"
 
+####################################################################################################
+# some type sets                                                                                   #  
+####################################################################################################
+float-type-set ::= "float","double","cl::sycl::cl_double","cl::sycl::cl_half","cl::sycl::cl_float"
+integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
+cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_int","cl::sycl::cl_long","cl::sycl::cl_uchar","cl::sycl::cl_ushort","cl::sycl::cl_uint","cl::sycl::cl_ulong"
+scalar_type_sets ::= cat(float-type-set(), cat(integer-type-set(),cl-integer-type-set()))
