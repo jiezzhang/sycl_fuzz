@@ -18,8 +18,7 @@ class Builtins:
             'head'      : self.head,
             'tail'      : self.tail,
             'any'       : self.any,
-            'anyVar'    : self.anyVar,
-            'anyVarTypes' : self.anyVarTypes,
+            'anyTypes'  : self.anyTypes,
             'join'      : self.join,
             'split'     : self.split,
             'len'       : self.length,
@@ -157,20 +156,10 @@ class Builtins:
         except IndexError, ie:
             self.runtimeError(
                 "any called upon an empty list" )
-    
-    def anyVar(self, args):
-        """ return any element of a list """
-        self.check(self.anyVar.func_name,args,1,[list])
-        try: 
-            var = random.choice(args[0])
-            return var[0]
-        except IndexError, ie:
-            self.runtimeError(
-                "any called upon an empty list" )
 
-    def anyVarTypes(self, args):
+    def anyTypes(self, args):
         """ return any element of a list """
-        self.checkListOfSameType(self.anyVarTypes.func_name,args,2,list)
+        self.checkListOfSameType(self.anyTypes.func_name,args,2,list)
         try: 
             ctx_vars = args[0]
             permit_vars = []
@@ -181,7 +170,7 @@ class Builtins:
             if len(permit_vars) == 0:
                 self.runtimeError("No permitted variable is passed in")
             var = random.choice(permit_vars)
-            return var[0]
+            return var
         except IndexError, ie:
             self.runtimeError(
                 "any called upon an empty list" )

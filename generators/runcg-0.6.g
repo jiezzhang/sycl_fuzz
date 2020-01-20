@@ -80,7 +80,7 @@ named-fun-sig ftype:ftypes param:params @
 declaration x values @ 
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
-::= *100 var-type " " variable " = " expr(new-ctx) ";"
+::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
 
 declarations () _ ::= ""
 declarations x:xs values
@@ -111,7 +111,7 @@ statement ctx
 #swap-stmt ctx ? islval(ctx) ::= "swap( " lval(ctx) ", " lval(ctx) " );"
 #swap-stmt _ ::= "; /* lvalue swap could be here */"
 
-return-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(ret, "void") ::= "return " expr(ctx) ";"
+return-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(ret, "void") ::= "return " expr(ctx, ret) ";"
 return-stmt _ ::= ""
 
 break-stmt ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(ivs), 0) ::= "break;"
@@ -142,7 +142,8 @@ try-catch-stmt ctx
 
 try-catch-stmt _ ::= "; /* try-catch statement was omited here */"
 
-throw-stmt ctx @ (lv:rv:as:ivs:fs:ret:caf:throw:_) = ctx ? neq(throw, 0) ::= "throw " expr(ctx) ";"
+#
+throw-stmt ctx @ (lv:rv:as:ivs:fs:ret:caf:throw:_) = ctx ? neq(throw, 0) ::= "throw " expr(ctx, "int") ";"
 throw-stmt _ ::= "; /* throw statement was omited here */"
 
 statements ctx
@@ -188,7 +189,7 @@ lv-assign ctx @
   lv = lval(ctx),
   (lv-exp, lv-type) = lv
 ? islval (ctx)
-::= *10 lv-exp " " assign-op() " " expr(ctx) ";"
+::= *10 lv-exp " " assign-op() " " expr(ctx, lv-type) ";"
   | *2  plusplus(ctx) ";"
 
 lv-assign _ ::= "; /* lvalue change could be here */"
@@ -196,7 +197,7 @@ lv-assign _ ::= "; /* lvalue change could be here */"
 islval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
 ::= or(neq(len(lv), 0), and(neq(len(as),0), and(neq(len(ivs), 0), eq(ret, "void"))))
 
-lval ctx ? not(islval(ctx)) ::= "ERROR!!!"
+lval ctx ? not(islval(ctx)) ::= "lval ERROR!!!"
 
 lval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(lv), 0)
 ::= *4 lval1(ctx)
@@ -213,11 +214,13 @@ lval3 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx,
   (arr-name, arr-type) = new-arr
 ::= (ivs-val(arr-name, ctx), arr-type)
 
-plusplus ctx ? not(islval(ctx)) ::= "ERROR!!!"
+plusplus ctx ? not(islval(ctx)) ::= "pp ERROR!!!"
 
-plusplus ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx 
-::= anyVarTypes(lv, scalar_type_sets()) "++"
-  | "++" anyVarTypes(lv, scalar_type_sets())
+plusplus ctx @ 
+  (lv:rv:as:ivs:fs:ret:_) = ctx,
+  type-sets = scalar-type-sets() 
+::= anyVarTypes(lv, type-sets) "++"
+  | "++" anyVarTypes(lv, type-sets)
 
 # CEAN
 
@@ -420,8 +423,12 @@ max-lim     ::= sub(max-loop-len(), 1)
 mid-lim     ::= div(max-loop-len(), 2)
 low-lim ()  ::= min-lim() | randint(min-lim(), mid-lim())
 big-lim ()  ::= max-lim() | randint(mid-lim(), max-lim())
-low-lim ivs ::= anyVar(ivs) | min-lim() | randint(min-lim(), mid-lim())
-big-lim ivs ::= anyVar(ivs) | max-lim() | randint(mid-lim(), max-lim())
+low-lim ivs @
+  type-sets = scalar-type-sets() 
+::= anyVarTypes(ivs, type-sets) | min-lim() | randint(min-lim(), mid-lim())
+big-lim ivs @
+  type-sets = scalar-type-sets() 
+::= anyVarTypes(ivs, type-sets) | max-lim() | randint(mid-lim(), max-lim())
 step-pos i  ::= i " += " randint(1,8) | *4 i "++" | *4 "++" i
 step-neg1 i ::= i "--" | "--" i
 step-neg i  ::= i " -= " randint(1,8) | *8 step-neg1(i)
@@ -430,15 +437,17 @@ for-clause (():_) ::= "; /* for-cycle skipped due to no free lvals variables */"
 
 for-clause ctx @
   (lv:rv:as:ivs:fs:ret:old_caf:throw:_) = ctx,
-  i       = anyVar(lv),
+  type-sets = scalar-type-sets() ,
+  i       = anyVarTypes(lv, type-sets),
+  (i-name, i-type) = i,
   new-lv  = diff(lv,(i,)),
   new-ivs = (i:ivs),
   new-ctx = (new-lv:rv:as:new-ivs:fs:ret:():throw:())
   ? le(len(new-ivs), 3)
 
-::= *10 "for (" i "=" low-lim(ivs) "; " i " <= " big-lim(ivs) "; " step-pos(i)  ") " block(new-ctx)
-  | *2  "for (" i "=" big-lim(ivs) "; " i " > "  low-lim(ivs) "; " step-neg1(i) ") " block(new-ctx)
-  | *1  "for (" i "=" big-lim(ivs) "; " i " <= " max-lim()    "; " step-neg(i)  ") " block(new-ctx)
+::= *10 "for (" i-name "=" low-lim(ivs) "; " i-name " <= " big-lim(ivs) "; " step-pos(i-name)  ") " block(new-ctx)
+  | *2  "for (" i-name "=" big-lim(ivs) "; " i-name " > "  low-lim(ivs) "; " step-neg1(i-name) ") " block(new-ctx)
+  | *1  "for (" i-name "=" big-lim(ivs) "; " i-name " <= " max-lim()    "; " step-neg(i-name)  ") " block(new-ctx)
 
 for-clause ctx ::= "; /* for-cycle skipped due to nesting limit */"
 
@@ -447,13 +456,13 @@ if-clause ctx
 ::= "if (" cond(ctx) ") " block(ctx)
   | "if (" cond(ctx) ") " block(ctx) " else " block(ctx)
 
-switch-clause ctx
+switch-clause ctx 
 ::= {
-    "switch (" expr(ctx) ") {"
+    "switch (" type-cast(expr(ctx, "int"), "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
     "}" }
   | {
-    "switch (" expr(ctx) ") {"
+    "switch (" type-cast(expr(ctx, "int"), "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
       "default: "
         statements(ctx)
@@ -482,81 +491,126 @@ switch-case n ctx @
 ####################################################################################################
 
 # condition
+# TODO: set expr as all types that support relation operator
 cond ctx
 ::= *16 rvalint(ctx)
   | *1 cond(ctx) " " logical-op() " " cond(ctx)
   | *1 "(" cond(ctx) ")"
-  | *1 expr(ctx) " " relation-op() " " expr(ctx)
+  | *1 expr(ctx, "int") " " relation-op() " " expr(ctx, "int")
 
-expr ctx ::= expr-term(ctx) expr-T(ctx)
+expr ctx T ::= expr-term(ctx, T) expr-T(ctx, T)
 
-expr-T ctx
-::= *1 " " binary-op() " " expr-term(ctx) expr-T(ctx)
+#TODO: disable if T can't have binary-op
+expr-T ctx T
+::= *1 " " binary-op(T) " " expr-term(ctx, T) expr-T(ctx, T)
   | *3 ""
 
-expr-term ctx
-::= *24 int()
-  | *24 rvalint(ctx)
-  | *2 unary-op() " " expr-term(ctx)
-  | *24 try-fun-call(ctx)
-  | *1 "(" expr(ctx) ")"
-  | *1 "(" expr(ctx) ", " expr(ctx) ")"
-  | *1 "(" cond(ctx) " ? " expr(ctx) " : " expr(ctx) ")"
-  | *1 div-expr(ctx)
+expr-term ctx T
+::= *24 const(T)
+  | *24 rval(ctx, T)
+  | *2 unary-expr(ctx, T)
+  | *24 try-fun-call(ctx, T)
+  | *1 "(" expr(ctx, T) ")"
+  | *1 "(" expr(ctx, T) ", " expr(ctx, T) ")"
+  | *1 "(" cond(ctx) " ? " expr(ctx, T) " : " expr(ctx, T) ")"
+  | *1 div-expr(ctx, T)
 
-div-expr ctx @ rv = rvalint(ctx)
-::= "(" rv "? (" expr(ctx) ") % " rv " : (" expr(ctx) "))"
-  | "(" rv "? (" expr(ctx) ") / " rv " : (" expr(ctx) "))"
+div-expr ctx T @ rv = rvalint(ctx)
+::= "(" rv "? (" expr(ctx, T) ") % " rv " : (" expr(ctx, T) "))"
+  | "(" rv "? (" expr(ctx, T) ") / " rv " : (" expr(ctx, T) "))"
 
 isrval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
 ::= or(or(or(neq(len(rv), 0), neq(len(ivs), 0)), neq(len(cean-get-new-as(ctx)), 0)), neq(len(cean-get-pre-as(ctx)), 0))
 
 rvalint ctx ? not(isrval(ctx)) ::= int()
-rvalint ctx ::= rval(ctx)
+rvalint ctx ::= rval(ctx, "long long")
 
-rval ctx ? not(isrval(ctx)) ::= "ERROR!!!"
+rval ctx T ? not(isrval(ctx)) ::= "rval ERROR!!!"
 
-rval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
-::= *100 rval1(ctx)
-  | *20  rval2(ctx)
-  | *20  rval3(ctx)
-  | *20  rval4(ctx)
-rval ctx ::= rval2(ctx)
+rval ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
+::= *100 rval1(ctx, T)
+  | *20  rval2(ctx, T)
 
-rval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
-::= *100 anyVar(rv)
-  | "copy(" anyVar(rv) ")"
+rval ctx T ::= rval2(ctx, T)
 
-rval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), neq(len(ivs), 0))
-::= *20 ivs-val(anyVar(as), ctx) 
-  | "copy(" ivs-val(anyVar(as), ctx) ")"
-rval2 ctx ::= rval3(ctx)
+rval1 ctx T
+::= *100 scalar-rval(ctx, T)
+  | "copy(" scalar-rval(ctx, T) ")"
 
-rval3 ctx @ cas = cean-get-new-as(ctx) ? neq(len(cas), 0)
-::= cean-val(any(cas), ctx) 
-rval3 ctx ::= rval4(ctx)
+rval2 ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), neq(len(ivs), 0))
+::= *20 array-rval(ctx, T)
+  | "copy(" array-rval(ctx, T) ")"
+rval2 ctx T ::= rval1(ctx, T)
 
-rval4 ctx @ cas = cean-get-pre-as(ctx) ? neq(len(cas), 0)
-::= any(cas)
-rval4 ctx ::= rval1(ctx)
+# TODO: unary-op require int type
+unary-expr ctx T @
+  type-sets = integer-type-sets()
+  ? in(T, type-sets)
+::= unary-op() " " expr-term(ctx, T)
+unary-expr ctx T ::= const(T)
 
+#TODO: add more scalar rval selection
+#TODO: SHOULD STATIC_CAST BE USED?
+scalar-rval ctx T @
+  (lv:rv:as:ivs:fs:ret:_) = ctx,
+  type-sets = scalar-type-sets(),
+  v = anyTypes(rv, type-sets)
+? in(T, type-sets)
+::= normal-scalar-rval-cast(v, T)
+scalar-rval ctx T ::= "scalar-rval ERROR!!!"
+
+normal-scalar-rval-cast v T @
+  (var-name, var-type) = v,
+  int-sets = integer-type-sets(),
+  float-sets = float-type-sets()
+? and(in(var-type, float-sets), in(T, int-sets))
+::= type-cast(var-name, T)
+normal-scalar-rval-cast v T @
+  (var-name, var-type) = v
+::= var-name
+
+#TODO: add more array rval selection
+#TODO: SHOULD STATIC_CAST BE USED?
+array-rval ctx T @
+  (lv:rv:as:ivs:fs:ret:_) = ctx,
+  type-sets = scalar-type-sets(),
+  v = anyVar(as)
+? in(T, type-sets)
+::= normal-array-rval-cast(v, T, ctx)
+array-rval ctx T ::= "array-rval ERROR!!!" 
+
+normal-array-rval-cast v T ctx @
+  (var-name, var-type) = v,
+  int-sets = integer-type-sets(),
+  float-sets = float-type-sets()
+? and(in(var-type, float-sets), in(T, int-sets))
+::= type-cast(ivs-val(v, ctx), T)
+normal-array-rval-cast v T ctx ::= ivs-val(v, ctx)
 
 # C operators
 unary-op
 ::= "-" | "+" | "!" | "~"
-  | "(" type() ")" # cast
 
-binary-op
+binary-op T
+::= *40  binary-cal-op(T)
+  | *3   binary-logical-op(T)
+  |      relation-op(T)
+  |      logical-op(T)
+
+binary-cal-op T
 ::= *20 "+"
   | *8  "-"
   | *6  "*"
-#  |     "|"
-#  |     "&"
-  |     "^"
-  |     relation-op()
-  |     logical-op()
 
-relation-op
+binary-logical-op T @
+  type-sets = integer-type-sets()
+? in (T, type-sets)
+::=     "|"
+  |     "&"
+  |     "^"
+binary-logical-op T ::= binary-cal-op(T)
+
+relation-op T
 ::= "=="
   | "!="
   | "<="
@@ -564,10 +618,11 @@ relation-op
   | "<"
   | ">"
 
-logical-op
+logical-op T
 ::= "&&"
   | "||"
 
+# TODO: add binary op
 assign-op
 ::= *2 "="
   |    "+="
@@ -591,7 +646,7 @@ list-lines i:l foo
 
 ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
-ivs-val2 adim ctx ::= "[" "(size_t)(" ivs-val3(ctx) ")]" ivs-val2(sub(adim, 1), ctx)
+ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "size_t") "]" ivs-val2(sub(adim, 1), ctx)
 ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 ::= *20 anyVar(ivs)
   | anyVar(ivs) "+" randint(1, mul(max-loop-len(), 2))
@@ -605,7 +660,7 @@ ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
   | randint(mul(max-loop-len(), 2), sub(array-size(), 1)) "-2*" anyVar(ivs)
   | sub(array-size(), 1) "-3*" anyVar(ivs)
 # nexted expressions can't have CEAN form
-  | "((unsigned int)(" expr((lv:rv:as:ivs:fs:ret:():0:())) "))%" array-size()
+  | "((unsigned int)(" expr((lv:rv:as:ivs:fs:ret:():0:()), "int") "))%" array-size()
 
 decl-arr a @ 
   (array,array-type) = a,
@@ -614,13 +669,19 @@ decl-arr a @
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 
-try-fun-call ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(fs), 0) ::= fun-call(any(fs), ctx)
-try-fun-call _ ::= int()
+#TODO: add more sycl types
+try-fun-call ctx T @ 
+  (lv:rv:as:ivs:fs:ret:_) = ctx,
+  type-sets = scalar-type-sets()
+  ? and(neq(len(fs), 0), in(T, type-sets))
+::= fun-call(anyTypes(fs, type-sets), ctx)
+try-fun-call ctx T ::= const(T)
+
 fun-call f ctx @ (fname:_:():_) = f ::= fname "()"
 fun-call f ctx @ (fname:_:fsig:_) = f, (i:l) = fsig
-::= fname "(" expr(ctx) fun-call2(l, ctx)  ")"
+::= fname "(" expr(ctx, i) fun-call2(l, ctx)  ")"
 fun-call2 () _ ::= ""
-fun-call2 i:l ctx ::= ", " expr(ctx) fun-call2(l, ctx)
+fun-call2 i:l ctx ::= ", " expr(ctx, i) fun-call2(l, ctx)
 
 decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) ");"
 
@@ -681,6 +742,13 @@ getn l _ ::= ()
 acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
 int _      ::= int()
+#TODO: Add more const type definition
+const T @ i-types = integer-type-sets() ? in(T, i-types)
+::= int()
+const T @ f-types = float-type-sets() ? in(T, f-types)
+::= int()"."int()
+const T ::= "const ERROR!!!"
+
 arr dim    ::= "a" dim "_" int(), dim | *1000 "a" dim "_" identifier(), dim
 fun arity  ::= "f" arity "_" int(), type(), fun-sig(arity)
              | *1000 "f" arity "_" identifier(), type(), fun-sig(arity)
@@ -689,6 +757,19 @@ fun-sig arity ::= type() : fun-sig(sub(arity, 1))
 
 int ::= str(randint(1,max-int()))
 max-int ::= 100
+
+anyVar vars @
+  v = any(vars),
+  (var-name, var-type) = v
+::= var-name
+
+anyVarTypes vars types @
+  v = anyTypes(vars, types),
+  (var-name, var-type) = v
+::= var-name
+
+type-cast exp T
+::= "static_cast<" T ">(" exp ")"
 
 type
 ::= *100 scalar_type()
@@ -748,6 +829,22 @@ letter
 # some type sets                                                                                   #  
 ####################################################################################################
 float-type-set ::= "float","double","cl::sycl::cl_double","cl::sycl::cl_half","cl::sycl::cl_float"
-integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
+cpp-integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
 cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_int","cl::sycl::cl_long","cl::sycl::cl_uchar","cl::sycl::cl_ushort","cl::sycl::cl_uint","cl::sycl::cl_ulong"
-scalar_type_sets ::= cat(float-type-set(), cat(integer-type-set(),cl-integer-type-set()))
+
+float-type-sets ::= float-type-set()
+integer-type-sets ::= cat(cpp-integer-type-set(),cl-integer-type-set())
+scalar-type-sets ::= cat(float-type-set(), integer-type-sets())
+
+isscalar T @
+  type-sets = scalar-type-sets(),
+::= in(T, type-sets)
+isinteger T @
+  type-sets = integer-type-sets(),
+::= in(T, type-sets)
+isfloat T @
+  type-sets = float-type-sets(),
+::= in(T, type-sets)
+isvec T :: in("vec", T)
+
+
