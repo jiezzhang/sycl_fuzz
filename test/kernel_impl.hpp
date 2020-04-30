@@ -17,93 +17,208 @@
   #define CEAN_FOOTER3
 #endif
 #include "libcpp.h"
+#include "type_cast.hpp"
 #include <CL/sycl.hpp>
 
 
-int f1_nak(cl::sycl::cl_uchar);
-float f1_o(unsigned int);
-cl::sycl::cl_char f1_tm(unsigned int);
-cl::sycl::cl_float f1_hscw(cl::sycl::cl_double);
-cl::sycl::cl_half f1_kzfsrhztxjv(cl::sycl::cl_char);
+cl::sycl::cl_uchar f2_snetg(cl::sycl::cl_uchar, cl::sycl::cl_double);
+float f3_ncay(unsigned int, unsigned int, unsigned int);
+cl::sycl::cl_float f0_kzlgo();
+cl::sycl::cl_half f2_fum(cl::sycl::cl_float, float);
+cl::sycl::cl_char f1_wkrb(int);
+cl::sycl::cl_half f3_q(int, cl::sycl::cl_uchar, cl::sycl::cl_char);
 
 template <typename T, int dims, cl::sycl::access::mode mode,
         cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>
 void kernel(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)
 {
-  cl::sycl::cl_float v_wbenps = result[item.get_global_linear_id()] + 95.93;
-  unsigned char v_avgsoqx = 13;
-  cl::sycl::cl_half v_wns = 75.1;
-  cl::sycl::cl_float v_z = 49.66;
+  cl::sycl::cl_char v_y = result[item.get_global_linear_id()];
+  double v_cn = 50.76;
+  cl::sycl::cl_char v_q = 5;
   
-  v_wns += 100.42;
-  ; /* for-cycle skipped due to nesting limit */
-  v_avgsoqx += result[item.get_global_linear_id()];
-}
-int f1_nak(cl::sycl::cl_uchar v_i) {
-  cl::sycl::cl_uchar a1_dx[192];
-  cl::sycl::cl_float a1_a[192];
-  
-  int v_b = 2;
-  long v_df = v_i;
-  cl::sycl::cl_uint v_tu = 61;
-  
-  v_tu = f1_hscw(v_df);
-  v_tu -= v_df + 55;
-  ++v_i;
-  return 63;
-}
-float f1_o(unsigned int v_d) {
-  float a1_rpwtw[192];
-  
-  double v_fr = 15.77 + 67.79;
-  
-  v_fr = v_d - 84.48 * 94.57;
-  v_d = f1_kzfsrhztxjv(f1_tm(static_cast<unsigned int>(v_fr) || 6)) + f1_hscw(f1_hscw(58.14)) + 12 + f1_hscw(61.41);
-  v_d *= static_cast<cl::sycl::cl_uchar>(v_fr);
-  return f1_hscw(51.91);
-}
-cl::sycl::cl_char f1_tm(unsigned int v_z) {
-  cl::sycl::cl_half a1_s[192];
-  
-  float v_kdixsgs = 9.51;
-  cl::sycl::cl_float v_gaxd = v_z + v_z;
-  cl::sycl::cl_half v_wxo = v_gaxd;
-  
-  v_z = f1_kzfsrhztxjv(56 + f1_hscw(45.96));
-  ; /* for-cycle skipped due to nesting limit */
-  v_kdixsgs *= v_kdixsgs;
-  return static_cast<cl::sycl::cl_char>(v_gaxd);
-}
-cl::sycl::cl_float f1_hscw(cl::sycl::cl_double v_byklo) {
-  cl::sycl::cl_double a1_zng[192];
-  
-  
-  ; /* for-cycle skipped due to nesting limit */
-  v_byklo++;
-  v_byklo *= 91.3 - f1_kzfsrhztxjv((86, f1_kzfsrhztxjv(static_cast<cl::sycl::cl_char>(v_byklo) + 44) + ((static_cast<cl::sycl::cl_char>(v_byklo), f1_kzfsrhztxjv(static_cast<cl::sycl::cl_char>(v_byklo))))));
-  return 47.23;
-}
-cl::sycl::cl_half f1_kzfsrhztxjv(cl::sycl::cl_char v_sm) {
-  
-  unsigned short v_m = 57;
-  
-  v_m += v_m;
-  v_sm = v_m;
-  switch (static_cast<size_t>(v_m * v_m + static_cast<int>(v_sm))) {
-    case 95: 
-      v_sm = v_sm;
-      v_m = 50;    
-    case 63: 
-      v_sm = 6.86;    
-    case 44: 
-      v_m += 11 + 7;
-      v_m = ~ 6;    
+  switch (cast<size_t>(v_y)) {
+    case 23: 
+      v_cn = (v_y ? 32.7 - 23.85 : v_y * (8.67));
+      break;    
+    case 94: 
+      ; /* for-cycle skipped due to nesting limit */
+      break;    
     
     default: 
-      v_sm *= 5.63;
+      switch (cast<size_t>(v_q)) {
+        case 2: 
+          ; /* for-cycle skipped due to nesting limit */
+          v_q = v_y;
+          result[item.get_global_linear_id()] *= 17 + 63;        
+        case 100: 
+          result[item.get_global_linear_id()]++;
+          v_y = (v_q? (11) / v_q : (v_q));
+          break;        
+        case 73: 
+          result[item.get_global_linear_id()] = 82;
+          switch (cast<size_t>(25)) {
+            case 39: 
+              result[item.get_global_linear_id()] = 100 + 45;            
+            case 69: 
+              v_q -= 98;            
+            case 3: 
+              result[item.get_global_linear_id()] -= 15;
+              if (v_y) {
+                
+                cl::sycl::cl_float v_jt = result[item.get_global_linear_id()];
+                int v_ru = 95 + result[item.get_global_linear_id()] + 15 + 41;
+                cl::sycl::cl_float v_gmqcvm = 72.60;
+                
+                ; /* for-cycle skipped due to nesting limit */
+                v_cn = v_y + result[item.get_global_linear_id()];
+                v_q += 59;
+                
+              } else {
+                cl::sycl::cl_float a1_gyfzd[192];
+                
+                cl::sycl::cl_char v_dec = (cast<long long>(v_cn)? (50) / cast<long long>(v_cn) : (86 + result[item.get_global_linear_id()])) || (cast<long long>(v_cn)? (result[item.get_global_linear_id()] + 96 + 31 + 55) / cast<long long>(v_cn) : (37));
+                cl::sycl::cl_float v_ndm = 63.30;
+                
+                ; /* for-cycle skipped due to nesting limit */
+                ; /* for-cycle skipped due to nesting limit */
+                result[item.get_global_linear_id()] = 46;
+                
+              }
+              break;            
+            case 66: 
+              result[item.get_global_linear_id()] = 76 + 100;
+              break;            
+            
+          }
+          ; /* for-cycle skipped due to nesting limit */
+          break;        
+        
+        default: 
+          v_cn = v_cn;
+      }
+      ; /* continue statement was omited here */
   }
-  v_m += 52;
-  v_sm = 21.98 + 94.40;
-  return v_sm;
+  ; /* for-cycle skipped due to nesting limit */
+  v_q = 68;
+}
+cl::sycl::cl_uchar f2_snetg(cl::sycl::cl_uchar v_zizrjpa, cl::sycl::cl_double v_orsonpu) {
+  float a1_wd[192];
+  
+  cl::sycl::cl_float v_zoo = v_zizrjpa;
+  cl::sycl::cl_char v_iucpasq = 54;
+  unsigned int v_j = 6;
+  cl::sycl::cl_half v_ucx = v_j;
+  
+  ; /* for-cycle skipped due to nesting limit */
+  {
+    
+    cl::sycl::cl_char v_bb = 96;
+    
+    if (v_bb) {
+      
+      cl::sycl::cl_half v_s = v_orsonpu;
+      cl::sycl::cl_double v_oxxwilnd = (v_zizrjpa ? v_zoo : 52.56);
+      cl::sycl::cl_float v_op = 84.32;
+      
+      v_zoo = 56.89;
+      v_iucpasq -= 9 + 56;
+      v_oxxwilnd -= 32.59 + 5.50;
+      return 76;
+    }
+    v_orsonpu -= v_zoo;
+    v_ucx = 68.3 + 73.8;
+    return v_iucpasq;
+  }
+  v_orsonpu *= v_ucx;
+  return v_j;
+}
+float f3_ncay(unsigned int v_lsbk, unsigned int v_w, unsigned int v_qeoah) {
+  
+  float v_n = 90.81;
+  
+  v_n *= 78.55;
+  v_w += v_w;
+  v_qeoah = 99.78;
+  return 59.41 + 29.76;
+}
+cl::sycl::cl_float f0_kzlgo() {
+  double a1_ih[192];
+  unsigned short a1_n[192];
+  
+  
+  if (16) {
+    double a1_v[192];
+    int a1_qf[192];
+    
+    
+    ; /* for-cycle skipped due to no free lvals variables */
+    ; /* for-cycle skipped due to no free lvals variables */
+    {
+      cl::sycl::cl_double a1_zm[192];
+      
+      cl::sycl::cl_uchar v_r = 15 && 81;
+      
+      v_r += 18 + 60 + 79;
+      ; /* for-cycle skipped due to nesting limit */
+      if (v_r) {
+        cl::sycl::cl_double a1_d[192];
+        
+        long v_j = 67 - (v_r? (31) % v_r : (67));
+        
+        v_j -= 58;
+        v_j = 71;
+        v_j *= 27 != v_j - 2;
+        v_j += 1 + (+ 93, 57) + 81;
+        return v_j;
+      }
+      return copy(v_r);
+    }
+    return (rval ERROR!!!);
+  }
+  ; /* lvalue change could be here */
+  ; /* lvalue change could be here */
+  return 45.59;
+}
+cl::sycl::cl_half f2_fum(cl::sycl::cl_float v_y, float v_v) {
+  double a1_zvfnv[192];
+  cl::sycl::cl_float a1_b[192];
+  
+  cl::sycl::cl_uchar v_elb = + 69;
+  cl::sycl::cl_double v_ce = 40.6;
+  cl::sycl::cl_char v_c = + 53;
+  int v_c = 19;
+  
+  v_ce += (cast<long long>(v_ce)? (21.20 + v_c + ((v_v) ? v_v * 50.62 : 40.83) + 26.70) % cast<long long>(v_ce) : (96.89)) + 77.81 + 52.62;
+  v_elb = 45;
+  v_v = 90;
+  return 56.79;
+}
+cl::sycl::cl_char f1_wkrb(int v_c) {
+  
+  double v_dnthnn = 92.27;
+  unsigned int v_g = 64;
+  
+  v_dnthnn -= 94.88 * 8.65;
+  v_c = v_dnthnn;
+  if (cast<long long>(v_c)) {
+    
+    
+    ; /* for-cycle skipped due to nesting limit */
+    v_g *= 72;
+    v_g -= cast<unsigned int>(v_dnthnn);
+    return 12 + cast<cl::sycl::cl_char>(v_dnthnn);
+  }
+  v_c = v_c;
+  v_g *= 42;
+  return 91;
+}
+cl::sycl::cl_half f3_q(int v_rd, cl::sycl::cl_uchar v_m, cl::sycl::cl_char v_vwppi) {
+  
+  
+  v_vwppi = 4;
+  v_m = 41.78;
+  ; /* for-cycle skipped due to nesting limit */
+  v_rd *= v_vwppi;
+  return v_m;
 }
 

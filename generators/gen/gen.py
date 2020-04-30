@@ -158,7 +158,7 @@ class Builtins:
                 "any called upon an empty list" )
 
     def anyTypes(self, args):
-        """ return any element of a list """
+        """ return any element of a list with specified type """
         self.checkListOfSameType(self.anyTypes.func_name,args,2,list)
         try: 
             ctx_vars = args[0]
@@ -168,7 +168,7 @@ class Builtins:
                 if v[1] in types:
                     permit_vars.append(v)
             if len(permit_vars) == 0:
-                self.runtimeError("No permitted variable is passed in")
+                return "EMPTY"
             var = random.choice(permit_vars)
             return var
         except IndexError, ie:

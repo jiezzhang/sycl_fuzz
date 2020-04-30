@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<configuration>
+  <generators>
+    <generator name="fuzz" command="ruby -I ./fuzz ./fuzz/icFuzzDriver.rb test.c" hasInput="true" />
+    <generator name="oldgen" command="python atg.py &lt; g2.atg.txt" />
+    <generator name="cexpr" command="python g -n 100000 cexpr.g" />
+    <generator name="base" command="python g -n 100000 runcg-0.6.g" />
+    <generator name="shuffle-fuzz" command="python shuffle_fuzz.py" Lang="IR" />
+  </generators>
+  <compilers>
+    <compiler name="clang" compilerC="clang" compilerCpp="clang++" linkerLTO="-fuse-ld=lld" 
+              ICS_bin_path="bin" ICS_lib_path="lib" 
+              arch_skx="-march=skx" arch_native="-march=native" />
+    <compiler name="clang_m32" compilerC="clang -m32" compilerCpp="clang++ -m32" linkerLTO="-fuse-ld=lld"
+              ICS_bin_path="bin" ICS_lib_path="lib"
+              arch_skx="-march=skx" arch_native="-march=native" />
+    <compiler name="xmain" compilerC="icx" compilerCpp="icpx" 
+              ICS_bin_path="linux/bin/intel64" ICS_lib_path="linux/compiler/lib/intel64_lin" 
+              arch_skx="-xCORE-AVX512" arch_native="-xHOST"/>
+  </compilers>
+</configuration>

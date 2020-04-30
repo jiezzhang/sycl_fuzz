@@ -38,6 +38,7 @@ program @
   "  #define CEAN_FOOTER3"
   "#endif"
   "#include \"libcpp.h\""
+  "#include \"type_cast.hpp\""
   "#include <CL/sycl.hpp>"
   ""
   list-lines(as, decl-arr)
@@ -458,11 +459,11 @@ if-clause ctx
 
 switch-clause ctx 
 ::= {
-    "switch (" type-cast(expr(ctx, "int"), "size_t") ") {"
+    "switch (" type-cast(expr(ctx, "int"), "double", "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
     "}" }
   | {
-    "switch (" type-cast(expr(ctx, "int"), "size_t") ") {"
+    "switch (" type-cast(expr(ctx, "int"), "double", "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
       "default: "
         statements(ctx)
@@ -564,7 +565,7 @@ normal-scalar-rval-cast v T @
   int-sets = integer-type-sets(),
   float-sets = float-type-sets()
 ? and(in(var-type, float-sets), in(T, int-sets))
-::= type-cast(var-name, T)
+::= type-cast(var-name, var-type, T)
 normal-scalar-rval-cast v T @
   (var-name, var-type) = v
 ::= var-name
@@ -584,7 +585,7 @@ normal-array-rval-cast v T ctx @
   int-sets = integer-type-sets(),
   float-sets = float-type-sets()
 ? and(in(var-type, float-sets), in(T, int-sets))
-::= type-cast(ivs-val(v, ctx), T)
+::= type-cast(ivs-val(v, ctx), var-type, T)
 normal-array-rval-cast v T ctx ::= ivs-val(v, ctx)
 
 # C operators
@@ -593,9 +594,9 @@ unary-op
 
 binary-op T
 ::= *40  binary-cal-op(T)
-  | *3   binary-logical-op(T)
-  |      relation-op(T)
-  |      logical-op(T)
+#  | *3   binary-logical-op(T)
+  |      relation-op()
+  |      logical-op()
 
 binary-cal-op T
 ::= *20 "+"
@@ -610,7 +611,7 @@ binary-logical-op T @
   |     "^"
 binary-logical-op T ::= binary-cal-op(T)
 
-relation-op T
+relation-op 
 ::= "=="
   | "!="
   | "<="
@@ -618,7 +619,7 @@ relation-op T
   | "<"
   | ">"
 
-logical-op T
+logical-op 
 ::= "&&"
   | "||"
 
@@ -646,7 +647,7 @@ list-lines i:l foo
 
 ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
-ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "size_t") "]" ivs-val2(sub(adim, 1), ctx)
+ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "double", "size_t") "]" ivs-val2(sub(adim, 1), ctx)
 ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 ::= *20 anyVar(ivs)
   | anyVar(ivs) "+" randint(1, mul(max-loop-len(), 2))
@@ -672,10 +673,14 @@ decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 #TODO: add more sycl types
 try-fun-call ctx T @ 
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  type-sets = scalar-type-sets()
-  ? and(neq(len(fs), 0), in(T, type-sets))
-::= fun-call(anyTypes(fs, type-sets), ctx)
+  type-sets = scalar-type-sets(),
+  f = anyTypes(fs, type-sets)
+  ? and(and(neq(len(fs), 0), in(T, type-sets)), eq(f, "EMPTY"))
+::= fun-call-cast(f, ctx, T)
 try-fun-call ctx T ::= const(T)
+
+fun-call-cast f ctx T @ (fname:ftype:():_) = f
+::= type-cast(fun-call(f, ctx), ftype, T)
 
 fun-call f ctx @ (fname:_:():_) = f ::= fname "()"
 fun-call f ctx @ (fname:_:fsig:_) = f, (i:l) = fsig
@@ -768,8 +773,20 @@ anyVarTypes vars types @
   (var-name, var-type) = v
 ::= var-name
 
-type-cast exp T
-::= "static_cast<" T ">(" exp ")"
+cast exp T
+::= "cast<" T ">(" exp ")"
+
+# TODO: will cast vector type
+# Supported cast: int2double, double2int
+type-cast exp expT dstT @
+    group-types = float-type-sets()
+? and(in(expT, group-types), not(in(dstT, group-types)))
+::= cast(exp, dstT)
+type-cast exp expT dstT @
+    group-types = integer-type-sets()
+? and(in(expT, group-types), not(in(dstT, group-types)))
+::= cast(exp, dstT)
+type-cast exp expT dstT ::= exp
 
 type
 ::= *100 scalar_type()
@@ -835,16 +852,3 @@ cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_i
 float-type-sets ::= float-type-set()
 integer-type-sets ::= cat(cpp-integer-type-set(),cl-integer-type-set())
 scalar-type-sets ::= cat(float-type-set(), integer-type-sets())
-
-isscalar T @
-  type-sets = scalar-type-sets(),
-::= in(T, type-sets)
-isinteger T @
-  type-sets = integer-type-sets(),
-::= in(T, type-sets)
-isfloat T @
-  type-sets = float-type-sets(),
-::= in(T, type-sets)
-isvec T :: in("vec", T)
-
-
