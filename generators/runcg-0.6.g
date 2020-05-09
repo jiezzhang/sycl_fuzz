@@ -713,7 +713,11 @@ set-gen genf type_foo genf_in n @
   l = set-gen(genf, type_foo, genf_in, sub(n, 1)),
   i = set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 ::= i:l
-set-uniq i type_foo l genf genf_in ? in(i, l) ::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
+set-uniq i type_foo l genf genf_in @
+  l_vars = get-vars(l),
+  (i_var, i_type) = i 
+  ? in(i_var, l_vars) 
+::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 set-uniq i type_foo _ _ _ @
   var-type = type_foo()
 ::= (i, var-type)
@@ -744,6 +748,15 @@ fun-names f:l @ (fname:_) = f ::= fname:fun-names(l)
 getn 0 _ ::= ()
 getn l s ? neq(len(s),0) ::= get(s, 0) : getn(sub(l,1), tail(s))
 getn l _ ::= ()
+
+get-vars n @
+  (i:l) = n
+  ? neq(len(n),0)
+::= get-var(i) : get-vars(l)
+get-vars n ::= ()
+get-var i @
+  (v,t) = i
+::= v
 
 ####################################################################################################
 # some basic stuff                                                                                 #  
