@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
           res_buffer.template get_access<cl::sycl::access::mode::read_write>(
               cgh);
       cgh.single_task<class fuzz_kernel>([=]() {
-        kernel(global_range, acc);
+        kernel_fun(global_range, acc);
       }); // Input range to prevent out-of-bound
     });
 #elif defined(PARALLEL_FOR_RANGE)
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
           res_buffer.template get_access<cl::sycl::access::mode::read_write>(
               cgh);
       cgh.parallel_for<class fuzz_kernel>(
-          global_range, [=](cl::sycl::item<1> item) { kernel(item, acc); });
+          global_range, [=](cl::sycl::item<1> item) { kernel_fun(item, acc); });
     });
 #elif defined(PARALLEL_FOR_ND_RANGE)
     queue.submit([&](cl::sycl::handler &cgh) {
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
               cgh);
       cgh.parallel_for<class fuzz_kernel>(
           cl::sycl::nd_range<1>(global_range, local_range),
-          [=](cl::sycl::nd_item<1> item) { kernel(item, acc); });
+          [=](cl::sycl::nd_item<1> item) { kernel_fun(item, acc); });
     });
 #elif defined(PARALLEL_FOR_WORK_ITEM)
     queue.submit([&](cl::sycl::handler &cgh) {
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
       cgh.parallel_for_work_group<class fuzz_kernel>(
           global_range, local_range, [=](cl::sycl::group<1> group) {
             group.parallel_for_work_item(
-                [&] cl::sycl::h_item<1> item { kernel(item, acc); });
+                [&] cl::sycl::h_item<1> item { kernel_fun(item, acc); });
           });
     });
 #elif defined(PARALLEL_FOR_WORK_GROUP)
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
               cgh);
       cgh.parallel_for_work_group<class fuzz_kernel>(
           global_range, local_range,
-          [=](cl::sycl::group<1> group) { kernel(item, acc); });
+          [=](cl::sycl::group<1> group) { kernel_fun(item, acc); });
     });
 #else
     std::cout << "Invalid kernel submitting way" << std::endl;

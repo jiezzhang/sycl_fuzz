@@ -40,12 +40,13 @@ program @
   "#include \"libcpp.h\""
   "#include \"type_cast.hpp\""
   "#include <CL/sycl.hpp>"
+  "using namespace cl::sycl;"
   ""
   list-lines(as, decl-arr)
   list-lines(fs, decl-fun)
   "template <typename T, int dims, cl::sycl::access::mode mode,"
   "        cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
-  "void kernel(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
+  "void kernel_fun(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
   "{"
     declarations(locals, accs)
     statements(ctx)
@@ -834,6 +835,17 @@ float_type
   | "cl::sycl::cl_double"
   | "cl::sycl::cl_half"
   | "cl::sycl::cl_float"
+
+vec_type ::= vec_elem_type() vec_dims() 
+
+vec_elem_type
+::= "char" | "short" | "int" | "long" | "float" | "double" | "half" | "cl_char" | "cl_uchar" 
+  | "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float" 
+  | "cl_double" | "cl_half"
+  | "schar" | "uchar" | "ushort" | "uint" | "ulong" | "longlong" | "ulonglong"
+
+vec_dims
+::= "2" | "3" | "4" | "8" | "16"
 
 global_acc_type
 ::= "unsigned long"
