@@ -438,14 +438,13 @@ for-clause (():_) ::= "; /* for-cycle skipped due to no free lvals variables */"
 
 for-clause ctx @
   (lv:rv:as:ivs:fs:ret:old_caf:throw:_) = ctx,
-  type-sets = scalar-type-sets() ,
-  i       = anyVarTypes(lv, type-sets),
+  type-sets = scalar-type-sets(),
+  i       = anyTypes(lv, type-sets),
   (i-name, i-type) = i,
   new-lv  = diff(lv,(i,)),
   new-ivs = (i:ivs),
   new-ctx = (new-lv:rv:as:new-ivs:fs:ret:():throw:())
   ? le(len(new-ivs), 3)
-
 ::= *10 "for (" i-name "=" low-lim(ivs) "; " i-name " <= " big-lim(ivs) "; " step-pos(i-name)  ") " block(new-ctx)
   | *2  "for (" i-name "=" big-lim(ivs) "; " i-name " > "  low-lim(ivs) "; " step-neg1(i-name) ") " block(new-ctx)
   | *1  "for (" i-name "=" big-lim(ivs) "; " i-name " <= " max-lim()    "; " step-neg(i-name)  ") " block(new-ctx)
@@ -492,16 +491,16 @@ switch-case n ctx @
 ####################################################################################################
 
 # condition
-# TODO: set expr as all types that support relation operator
-cond ctx
+cond ctx @ 
+  type-sets = integer-type-sets(),
+  cond-type = any(type-sets)
 ::= *16 rvalint(ctx)
   | *1 cond(ctx) " " logical-op() " " cond(ctx)
   | *1 "(" cond(ctx) ")"
-  | *1 expr(ctx, "int") " " relation-op() " " expr(ctx, "int")
+  | *1 expr(ctx, cond-type) " " relation-op() " " expr(ctx, cond-type)
 
 expr ctx T ::= expr-term(ctx, T) expr-T(ctx, T)
 
-#TODO: disable if T can't have binary-op
 expr-T ctx T
 ::= *1 " " binary-op(T) " " expr-term(ctx, T) expr-T(ctx, T)
   | *3 ""
@@ -516,17 +515,20 @@ expr-term ctx T
   | *1 "(" cond(ctx) " ? " expr(ctx, T) " : " expr(ctx, T) ")"
   | *1 div-expr(ctx, T)
 
-div-expr ctx T @ rv = rvalint(ctx)
-::= "(" rv "? (" expr(ctx, T) ") % " rv " : (" expr(ctx, T) "))"
-  | "(" rv "? (" expr(ctx, T) ") / " rv " : (" expr(ctx, T) "))"
+#Jie: won't try %. That will limit rval data type
+div-expr ctx T @ rv = rval(ctx, T)
+::= "(" rv "? (" expr(ctx, T) ") / " rv " : (" expr(ctx, T) "))"
+#  | "(" rv "? (" expr(ctx, T) ") % " rv " : (" expr(ctx, T) "))"
 
+#Jie: Remove cean-get-new-as and cean-get-pre-as. Instead, check array number
 isrval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
-::= or(or(or(neq(len(rv), 0), neq(len(ivs), 0)), neq(len(cean-get-new-as(ctx)), 0)), neq(len(cean-get-pre-as(ctx)), 0))
+::= or(or(neq(len(rv), 0), neq(len(ivs), 0)), neq(len(as), 0))
 
 rvalint ctx ? not(isrval(ctx)) ::= int()
 rvalint ctx ::= rval(ctx, "long long")
 
-rval ctx T ? not(isrval(ctx)) ::= "rval ERROR!!!"
+#Jie: If no rval can be found, use scalar instead
+rval ctx T ? not(isrval(ctx)) ::= const(T)
 
 rval ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
 ::= *100 rval1(ctx, T)
@@ -550,7 +552,7 @@ unary-expr ctx T @
 ::= unary-op() " " expr-term(ctx, T)
 unary-expr ctx T ::= const(T)
 
-#TODO: add more scalar rval selection
+#TODO: add more scalar rval selection (vec for example)
 #TODO: SHOULD STATIC_CAST BE USED?
 scalar-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
@@ -592,11 +594,12 @@ normal-array-rval-cast v T ctx ::= ivs-val(v, ctx)
 unary-op
 ::= "-" | "+" | "!" | "~"
 
+#TODO: Add all logical operators
 binary-op T
 ::= *40  binary-cal-op(T)
 #  | *3   binary-logical-op(T)
-  |      relation-op()
-  |      logical-op()
+#  |      relation-op()
+#  |      logical-op()
 
 binary-cal-op T
 ::= *20 "+"
