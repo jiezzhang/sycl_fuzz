@@ -585,15 +585,16 @@ normal-scalar-rval-cast v T @
 #TODO: SHOULD STATIC_CAST BE USED?
 array-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  v = anyVar(as)
+  v = any(as)
 ::= normal-array-rval-cast(v, T, ctx)
 array-rval ctx T ::= "array-rval ERROR!!!" 
 
 normal-array-rval-cast v T ctx @
-  (var-name, var-type) = v,
+  (array, var-type) = v,
+  (aname, adim) = array,
   int-sets = integer-type-sets(),
   float-sets = float-type-sets()
-::= type-cast(ivs-val(v, ctx), var-type, T)
+::= type-cast(ivs-val(array, ctx), var-type, T)
 
 vector-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
