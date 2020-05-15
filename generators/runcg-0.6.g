@@ -93,7 +93,6 @@ declarations x:xs values
 ####################################################################################################
 # statements                                                                                       #
 ####################################################################################################
-
 statement ctx
 ::=  *100 lv-assign(ctx)
 #  | *100 cean-lv-assign(ctx) # until DPD200285292 is fixed
@@ -220,7 +219,7 @@ plusplus ctx ? not(islval(ctx)) ::= "pp ERROR!!!"
 
 plusplus ctx @ 
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  type-sets = scalar-type-sets() 
+  type-sets = basic-type-sets() 
 ::= anyVarTypes(lv, type-sets) "++"
   | "++" anyVarTypes(lv, type-sets)
 
@@ -500,6 +499,7 @@ cond ctx @
   | *1 "(" cond(ctx) ")"
   | *1 expr(ctx, cond-type) " " relation-op() " " expr(ctx, cond-type)
 
+#TODO: vector support start here
 expr ctx T ::= expr-term(ctx, T) expr-T(ctx, T)
 
 expr-T ctx T
@@ -517,23 +517,31 @@ expr-term ctx T
   | *1 div-expr(ctx, T)
 
 #Jie: won't try %. That will limit rval data type
-div-expr ctx T @ rv = rval(ctx, T)
+div-expr ctx T @ 
+  rv = rval(ctx, T),
+  type-sets = scalar-type-sets()
+  ? in(T, type-sets)
 ::= "(" rv "? (" expr(ctx, T) ") / " rv " : (" expr(ctx, T) "))"
 #  | "(" rv "? (" expr(ctx, T) ") % " rv " : (" expr(ctx, T) "))"
+div-expr ctx T ::= expr-term(ctx, T)
 
 #Jie: Remove cean-get-new-as and cean-get-pre-as. Instead, check array number
 isrval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx
 ::= or(or(neq(len(rv), 0), neq(len(ivs), 0)), neq(len(as), 0))
 
 rvalint ctx ? not(isrval(ctx)) ::= int()
-rvalint ctx ::= rval(ctx, "long long")
+rvalint ctx @
+  type-sets = integer-type-sets(),
+  int-type = any(type-sets)
+::= rval(ctx, int-type)
 
-#Jie: If no rval can be found, use scalar instead
+#Jie: If no rval can be found, use const instead
 rval ctx T ? not(isrval(ctx)) ::= const(T)
 
 rval ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
 ::= *100 rval1(ctx, T)
   | *20  rval2(ctx, T)
+  | *10  rval3(ctx, T)
 
 rval ctx T ::= rval2(ctx, T)
 
@@ -544,14 +552,19 @@ rval1 ctx T
 rval2 ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), neq(len(ivs), 0))
 ::= *20 array-rval(ctx, T)
   | "copy(" array-rval(ctx, T) ")"
-rval2 ctx T ::= rval1(ctx, T)
+rval2 ctx T ::= rval3(ctx, T)
+
+rval3 ctx T 
+::= *100 vector-rval(ctx, T)
+# | "copy(" vector-rval(ctx, T) ")"
 
 # TODO: unary-op require int type
 unary-expr ctx T @
-  type-sets = integer-type-sets()
-  ? in(T, type-sets)
+  type-sets1 = integer-type-sets(),
+  type-sets2 = integer-vector-type-sets()
+  ? or(in(T, type-sets1), in(T, type-sets2))
 ::= unary-op() " " expr-term(ctx, T)
-unary-expr ctx T ::= const(T)
+unary-expr ctx T ::= expr-term(ctx, T)
 
 #TODO: add more scalar rval selection (vec for example)
 #TODO: SHOULD STATIC_CAST BE USED?
@@ -559,27 +572,20 @@ scalar-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
   type-sets = scalar-type-sets(),
   v = anyTypes(rv, type-sets)
-? in(T, type-sets)
+? neq("EMPTY", v)
 ::= normal-scalar-rval-cast(v, T)
-scalar-rval ctx T ::= "scalar-rval ERROR!!!"
+scalar-rval ctx T ::= rval2(ctx, T)
 
 normal-scalar-rval-cast v T @
-  (var-name, var-type) = v,
-  int-sets = integer-type-sets(),
-  float-sets = float-type-sets()
-? and(in(var-type, float-sets), in(T, int-sets))
-::= type-cast(var-name, var-type, T)
-normal-scalar-rval-cast v T @
   (var-name, var-type) = v
-::= var-name
+::= type-cast(var-name, var-type, T)
+
 
 #TODO: add more array rval selection
 #TODO: SHOULD STATIC_CAST BE USED?
 array-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  type-sets = scalar-type-sets(),
   v = anyVar(as)
-? in(T, type-sets)
 ::= normal-array-rval-cast(v, T, ctx)
 array-rval ctx T ::= "array-rval ERROR!!!" 
 
@@ -587,9 +593,21 @@ normal-array-rval-cast v T ctx @
   (var-name, var-type) = v,
   int-sets = integer-type-sets(),
   float-sets = float-type-sets()
-? and(in(var-type, float-sets), in(T, int-sets))
 ::= type-cast(ivs-val(v, ctx), var-type, T)
-normal-array-rval-cast v T ctx ::= ivs-val(v, ctx)
+
+vector-rval ctx T @
+  (lv:rv:as:ivs:fs:ret:_) = ctx,
+  type-sets = vector-type-sets(),
+  v = anyTypes(rv, type-sets)
+? not(eq("EMPTY", v))
+::= normal-vector-rval-cast(v, T)
+vector-rval ctx T ::= const(T)
+
+#TODO: randomly use element
+normal-vector-rval-cast v T @
+  (var-name, var-type) = v
+::= type-cast(var-name, var-type, T)
+
 
 # C operators
 unary-op
@@ -674,16 +692,15 @@ decl-arr a @
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 
-#TODO: add more sycl types
 try-fun-call ctx T @ 
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  type-sets = scalar-type-sets(),
+  type-sets = basic-type-sets(),
   f = anyTypes(fs, type-sets)
-  ? and(and(neq(len(fs), 0), in(T, type-sets)), eq(f, "EMPTY"))
+  ? and(and(neq(len(fs), 0), in(T, type-sets)), neq(f, "EMPTY"))
 ::= fun-call-cast(f, ctx, T)
 try-fun-call ctx T ::= const(T)
 
-fun-call-cast f ctx T @ (fname:ftype:():_) = f
+fun-call-cast f ctx T @ (fname:ftype:_:_) = f
 ::= type-cast(fun-call(f, ctx), ftype, T)
 
 fun-call f ctx @ (fname:_:():_) = f ::= fname "()"
@@ -769,7 +786,9 @@ const T @ i-types = integer-type-sets() ? in(T, i-types)
 ::= int()
 const T @ f-types = float-type-sets() ? in(T, f-types)
 ::= int()"."int()
-const T ::= "const ERROR!!!"
+const T @ v-types = vector-type-sets() ? in(T, v-types)
+::= T "(" int() ")"
+const T ::= T " const ERROR!!!"
 
 arr dim    ::= "a" dim "_" int(), dim | *1000 "a" dim "_" identifier(), dim
 fun arity  ::= "f" arity "_" int(), type(), fun-sig(arity)
@@ -803,11 +822,15 @@ type-cast exp expT dstT @
     group-types = integer-type-sets()
 ? and(in(expT, group-types), not(in(dstT, group-types)))
 ::= cast(exp, dstT)
+type-cast exp expT dstT @
+    group-types = vector-type-sets()
+? and(or(in(expT, group-types), in(dstT, group-types)), neq(expT, dstT))
+::= cast(exp, dstT)
 type-cast exp expT dstT ::= exp
 
 type
 ::= *100 scalar_type()
-#  | *50  vec_type()
+  | *50  vec_type()
 
 scalar_type
 ::= integer_type()
@@ -852,9 +875,9 @@ float_type
 vec_type ::= vec_elem_type() vec_dims() 
 
 vec_elem_type
-::= "char" | "short" | "int" | "long" | "float" | "double" | "half" | "cl_char" | "cl_uchar" 
-  | "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float" 
-  | "cl_double" | "cl_half"
+::= "char" | "short" | "int" | "long" | "float" | "double" | "half" | "cl::sycl::cl_char" | "cl::sycl::cl_uchar" 
+  | "cl::sycl::cl_short" | "cl::sycl::cl_ushort" | "cl::sycl::cl_int" | "cl::sycl::cl_uint" | "cl::sycl::cl_long" | "cl::sycl::cl_ulong" | "cl::sycl::cl_float" 
+  | "cl::sycl::cl_double" | "cl::sycl::cl_half"
   | "schar" | "uchar" | "ushort" | "uint" | "ulong" | "longlong" | "ulonglong"
 
 vec_dims
@@ -880,3 +903,29 @@ cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_i
 float-type-sets ::= float-type-set()
 integer-type-sets ::= cat(cpp-integer-type-set(),cl-integer-type-set())
 scalar-type-sets ::= cat(float-type-set(), integer-type-sets())
+
+int-vector-elem-type-set2 ::= "char2","short2","int2","long2","cl::sycl::cl_char2","cl::sycl::cl_uchar2","cl::sycl::cl_short2","cl::sycl::cl_ushort2","cl::sycl::cl_int2","cl::sycl::cl_uint2","cl::sycl::cl_long2","cl::sycl::cl_ulong2","schar2","uchar2","ushort2","uint2","ulong2","longlong2","ulonglong2"
+int-vector-elem-type-set3 ::= "char3","short3","int3","long3","cl::sycl::cl_char3","cl::sycl::cl_uchar3","cl::sycl::cl_short3","cl::sycl::cl_ushort3","cl::sycl::cl_int3","cl::sycl::cl_uint3","cl::sycl::cl_long3","cl::sycl::cl_ulong3","schar3","uchar3","ushort3","uint3","ulong3","longlong3","ulonglong3"
+int-vector-elem-type-set4 ::= "char4","short4","int4","long4","cl::sycl::cl_char4","cl::sycl::cl_uchar4","cl::sycl::cl_short4","cl::sycl::cl_ushort4","cl::sycl::cl_int4","cl::sycl::cl_uint4","cl::sycl::cl_long4","cl::sycl::cl_ulong4","schar4","uchar4","ushort4","uint4","ulong4","longlong4","ulonglong4"
+int-vector-elem-type-set8 ::= "char8","short8","int8","long8","cl::sycl::cl_char8","cl::sycl::cl_uchar8","cl::sycl::cl_short8","cl::sycl::cl_ushort8","cl::sycl::cl_int8","cl::sycl::cl_uint8","cl::sycl::cl_long8","cl::sycl::cl_ulong8","schar8","uchar8","ushort8","uint8","ulong8","longlong8","ulonglong8"
+int-vector-elem-type-set16 ::= "char16","short16","int16","long16","cl::sycl::cl_char16","cl::sycl::cl_uchar16","cl::sycl::cl_short16","cl::sycl::cl_ushort16","cl::sycl::cl_int16","cl::sycl::cl_uint16","cl::sycl::cl_long16","cl::sycl::cl_ulong16","schar16","uchar16","ushort16","uint16","ulong16","longlong16","ulonglong16"
+
+float-vector-elem-type-set2 ::= "float2","double2","half2","cl::sycl::cl_float2","cl::sycl::cl_double2","cl::sycl::cl_half2"
+float-vector-elem-type-set3 ::= "float3","double3","half3","cl::sycl::cl_float3","cl::sycl::cl_double3","cl::sycl::cl_half3"
+float-vector-elem-type-set4 ::= "float4","double4","half4","cl::sycl::cl_float4","cl::sycl::cl_double4","cl::sycl::cl_half4"
+float-vector-elem-type-set8 ::= "float8","double8","half8","cl::sycl::cl_float8","cl::sycl::cl_double8","cl::sycl::cl_half8"
+float-vector-elem-type-set16 ::= "float16","double16","half16","cl::sycl::cl_float16","cl::sycl::cl_double16","cl::sycl::cl_half16"
+
+integer-vector-type-sets @
+  set1 = cat(int-vector-elem-type-set2(), int-vector-elem-type-set3()),
+  set2 = cat(int-vector-elem-type-set4(), int-vector-elem-type-set8())
+::= cat(cat(set1, set2), int-vector-elem-type-set16())
+
+float-vector-type-sets @
+  set1 = cat(float-vector-elem-type-set2(), float-vector-elem-type-set3()),
+  set2 = cat(float-vector-elem-type-set4(), float-vector-elem-type-set8())
+::= cat(cat(set1, set2), float-vector-elem-type-set16())
+
+vector-type-sets ::= cat(integer-vector-type-sets(), float-vector-type-sets())
+
+basic-type-sets ::= cat(scalar-type-sets(), vector-type-sets())
