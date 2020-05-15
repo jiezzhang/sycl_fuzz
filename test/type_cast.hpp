@@ -14,23 +14,22 @@ using EnableIfNotVecTypes = typename std::enable_if<!IsVecNot<T>::value, T>::typ
 template <typename T>
 using EnableIfVecTypes = typename std::enable_if<IsVecNot<T>::value, T>::type;
 
-template <typename T1, typename T, int N>
-EnableIfNotVecTypes<T1> cast(cl::sycl::vec<T, N> vec) {
-    return  T1(vec.x());
-}
-
+// Scalar n1 -> Scalar n2: n2=n1
 template <typename T1, typename T2>
 EnableIfNotVecTypes<T1> cast(T2 val) {
     return static_cast<T1>(val);
 }
 
-template <typename T1,typename T2, int N>
-EnableIfVecTypes<T1> cast(cl::sycl::vec<T2, N> vec) {
-    return vec.template convert<typename T1::element_type>();
-}
-
+//Scalar n -> Vector v: v=(n,n,n...)
 template <typename T1, typename T2, typename=EnableIfNotVecTypes<T2>>
 EnableIfVecTypes<T1> cast(T2 val) {
     return T1(val);
+}
+
+//Vector -> Scalar
+//Vector -> Vector 
+template <typename T1, typename T, int N>
+T1 cast(cl::sycl::vec<T, N> vec) {
+    return  T1(vec.s0());
 }
 
