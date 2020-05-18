@@ -19,6 +19,7 @@ class Builtins:
             'tail'      : self.tail,
             'any'       : self.any,
             'anyTypes'  : self.anyTypes,
+            'output'    : self.output,
             'join'      : self.join,
             'split'     : self.split,
             'len'       : self.length,
@@ -27,6 +28,7 @@ class Builtins:
             'uniq'      : self.unique,
             'union'     : self.union,
             'diff'      : self.diff,
+            'diff_axis' : self.diff_axis,
             'push-back' : self.pushBack,
             'push-front': self.pushFront,
             'back'      : self.back,
@@ -468,11 +470,35 @@ class Builtins:
         """
         self.checkListOfSameType(self.diff.func_name,args,2,list)
         l = []; ls = []
-        for l1 in args[1:]: ls.extend(l1)
+        for l1 in args[1:]: 
+            ls.extend(l1)
         for e in args[0]:
             if e not in ls:
                 l.append(e)
         return l
+
+    def diff_axis(self,args):
+        """ returns difference between first and other lists according to axis:
+            diff_axis( ([1,a],[2,b]) , ([1,c]) , 0) = ([2,b])
+            diff_axis( ([1,a],[2,b]) , (1) , 0) = ([2,b])
+        """
+        self.check(self.diff.func_name,args,3,[list, list, int])
+        l = []; ls = []
+        for l1 in args[1]:
+            if l1.__class__ is list:
+                ls.append(l1[args[2]])
+            else:
+                ls.append(l1)
+        for e in args[0]:
+            elem = e[args[2]]
+
+            if elem not in ls:
+                l.append(e)
+        return l
+    
+    def output(self,args):
+        print args[0]
+        return args[0]
     
     def sort(self,args):
         """ sort elements of a list:

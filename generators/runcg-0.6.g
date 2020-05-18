@@ -59,7 +59,7 @@ program @
 fun-defs () _ _ ::= ""
 fun-defs f:l as fs @
   (fname:ftype:fsig:_) = f,
-  params  = var-set(len(fsig)),
+  params  = fun-var-set(fsig),
   vars    = params,
   ivs     = (),
   new-ctx = (params:vars:as:ivs:l:ftype:():0:())
@@ -157,9 +157,9 @@ statements ctx
 # block
 block ctx @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  locals = diff(var-set(randint(0,4)), rv),
+  locals = diff_axis(var-set(randint(0,4)), rv, 0),
   local-asn = (randint(0,2), randint(0,0), randint(0,0)),
-  local-as = diff(arr-set(local-asn), rv),
+  local-as = diff_axis(arr-set(local-asn), rv, 0),
   new-lv = union(lv, locals),
   new-rv = union(rv, locals),
   new-as = union(as, local-as),
@@ -611,8 +611,10 @@ normal-vector-rval-cast v T @
 
 
 # C operators
+# TODO: ! and ~ will change data type 
 unary-op
-::= "-" | "+" | "!" | "~"
+::= "-" | "+" 
+#  | "!" | "~"
 
 #TODO: Add all logical operators
 binary-op T
@@ -722,6 +724,8 @@ arr-set l          ::= arr-set2(l, 1)
 arr-set2 () _      ::= ()
 arr-set2 n:l dim   ::= cat(arr-set-gen(dim, n), arr-set2(l, add(dim, 1)))
 
+fun-var-set param_types ::= set-gen-fun-var(len(param_types), param_types)
+
 fun-set l          ::= fun-set2(l, 0)
 fun-set2 () _      ::= ()
 fun-set2 n:l arity ::= cat(fun-set-gen(arity, n), fun-set2(l, add(arity, 1)))
@@ -731,9 +735,8 @@ set-gen genf type_foo genf_in n @
   l = set-gen(genf, type_foo, genf_in, sub(n, 1)),
   i = set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 ::= i:l
-set-uniq i type_foo l genf genf_in @
-  l_vars = get-vars(l),
-  (i_var, i_type) = i 
+set-uniq i_var type_foo l genf genf_in @
+  l_vars = get-vars(l)
   ? in(i_var, l_vars) 
 ::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 set-uniq i type_foo _ _ _ @
@@ -776,6 +779,17 @@ get-var i @
   (v,t) = i
 ::= v
 
+set-gen-fun-var 0 _ ::= ()
+set-gen-fun-var n params @
+  (p:ps) = params,
+  l = set-gen-fun-var(sub(n, 1), ps),
+  i = set-uniq-fun-var(n, p)
+::= i:l
+
+set-uniq-fun-var n param @
+  var-name = "arg_" n
+::= (var-name, param)
+
 ####################################################################################################
 # some basic stuff                                                                                 #  
 ####################################################################################################
@@ -815,6 +829,10 @@ cast exp T
 
 # TODO: will cast vector type
 # Supported cast: int2double, double2int
+type-cast exp expT dstT @
+    half-types = "cl::sycl::cl_half"
+? or(eq(expT, half-types), eq(dstT, half-types))
+::= cast(exp, dstT)
 type-cast exp expT dstT @
     group-types = float-type-sets()
 ? and(in(expT, group-types), not(in(dstT, group-types)))
@@ -897,6 +915,7 @@ letter
 ####################################################################################################
 # some type sets                                                                                   #  
 ####################################################################################################
+#TODO: half and double type !
 float-type-set ::= "float","double","cl::sycl::cl_double","cl::sycl::cl_half","cl::sycl::cl_float"
 cpp-integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
 cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_int","cl::sycl::cl_long","cl::sycl::cl_uchar","cl::sycl::cl_ushort","cl::sycl::cl_uint","cl::sycl::cl_ulong"
