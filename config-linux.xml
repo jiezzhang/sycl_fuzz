@@ -7,6 +7,7 @@
     <generator name="cexpr" command="python g -n 100000 cexpr.g" />
     <generator name="base" command="python g -n 100000 runcg-0.6.g" />
     <generator name="shuffle-fuzz" command="python shuffle_fuzz.py" Lang="IR" />
+    <generator name="dpcpp-base" command="python g -n 100000 runcg-0.6.g">
   </generators>
   <compilers>
     <compiler name="clang" compilerC="clang" compilerCpp="clang++" linkerLTO="-fuse-ld=lld" 
