@@ -167,6 +167,7 @@ block ctx @
   new-ctx-throw = (new-lv:new-rv:new-as:ivs:fs:ret:():1:())
 ::= *5 {
   "{"
+#TODO: initialize array!!!
     list-lines(local-as, decl-arr)
     declarations(locals, rv)
     statement(new-ctx)
@@ -736,8 +737,8 @@ set-gen genf type_foo genf_in n @
   i = set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 ::= i:l
 set-uniq i_var type_foo l genf genf_in @
-  l_vars = get-vars(l)
-  ? in(i_var, l_vars) 
+  lvars = get-vars(l)
+  ? in(i_var, lvars) 
 ::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 set-uniq i type_foo _ _ _ @
   var-type = type_foo()
@@ -749,7 +750,10 @@ arr-set-gen dim n @
   l = arr-set-gen(dim, sub(n, 1)),
   i = arr-set-uniq(arr(dim), l, dim)
 ::= i:l
-arr-set-uniq i l dim ? in(i, l) ::= arr-set-uniq(arr(dim), l, dim)
+arr-set-uniq i l dim @
+  lvars = get-vars(l)
+  ? in(i, lvars) 
+::= arr-set-uniq(arr(dim), l, dim)
 arr-set-uniq i _ _ @
   arr-type = type()
 ::= (i, arr-type)
@@ -800,7 +804,7 @@ int _      ::= int()
 const T @ i-types = integer-type-sets() ? in(T, i-types)
 ::= int()
 const T @ f-types = float-type-sets() ? in(T, f-types)
-::= int()"."int()
+::= T "(" int()"."int() ")"
 const T @ v-types = vector-type-sets() ? in(T, v-types)
 ::= T "(" int() ")"
 const T ::= T " const ERROR!!!"
