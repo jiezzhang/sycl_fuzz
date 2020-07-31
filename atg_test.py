@@ -180,6 +180,8 @@ class Runner(object):
                 if "Lang" in generator.attrib:
                     if generator.attrib["Lang"] == "IR":
                         self.lang = "ll"
+                    elif generator.attrib["Lang"] == "DPCPP":
+                        self.lang = "hpp"
                     else:
                         raise Exception("Unsupported test language")
 
@@ -290,6 +292,8 @@ class Runner(object):
             self.my_env['LIBRARY_PATH'] = build_lib_directory + os.pathsep + self.my_env["LIBRARY_PATH"]
         else:
             self.my_env['LIBRARY_PATH'] = build_lib_directory
+        # Won't copy OCL_ICD_FILENAMES. Use env variable instead        
+
         compiler_executable = self.compilerC.split(" ")[0]
         if not os.path.exists(os.path.join(build_bin_directory, compiler_executable)) and \
                 not os.path.exists(os.path.join(build_bin_directory, compiler_executable + ".exe")):
@@ -306,6 +310,8 @@ class Runner(object):
             os.remove(os.path.join(self.test_dir, 'test.cpp'))
         if os.path.exists(os.path.join(self.test_dir, 'input.txt')):
             os.remove(os.path.join(self.test_dir, 'input.txt'))
+        if os.path.exists(os.path.join(self.test_dir, 'kernel_impl.hpp')):
+            os.remove(os.path.join(self.test_dir, 'kernel_impl.hpp'))
         gen_command = "cd %s && " % os.path.join(self.test_dir, "..", "generators") + self.generator_command
         (status, out_data, err_data) = run_command(gen_command, env=self.my_env)
         while status != 0:
@@ -321,12 +327,22 @@ class Runner(object):
             self.run_input = True
         else:
             self.run_input = False
-        self.lib_lang = "cpp" if re.search("This is C\+\+", out_data) else "c"
-        if self.lang == "c" or self.lang == "cpp":
+        if re.search("This is C\+\+", out_data):
+            self.lib_lang = "cpp"
+        elif re.search("This is DPCPP", out_data):
+            self.lib_lang = "hpp"
+        else:
+            self.lib_lang = "c"
+        if self.lang == "c" or self.lang == "cpp" or self.lang == "hpp":
             self.lang = self.lib_lang
         if self.lang == "ll":
             out_data = out_data.replace("\r\n", "\n")
-        test_file = open(os.path.join(self.test_dir, 'test.' + self.lang), "wb")
+        if re.search("dpcpp", self.generator):
+            self.test_file_name = 'kernel_impl' + self.lang
+            test_file = open(os.path.join(self.test_dir, self.test_file_name), "wb")
+        else:
+            self.test_file_name = 'test.' + self.lang
+            test_file = open(os.path.join(self.test_dir, self.test_file_name), "wb")
         test_file.write(out_data)
         test_file.close()
         logger.info("Test generated(" + self.generator + ")")

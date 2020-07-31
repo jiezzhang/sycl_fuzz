@@ -19,7 +19,7 @@ program @
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
   ctx     = (vars:vars:as:ivs:fs:"void":():0:())  
 ::= {
-  "// This is C++" # This comment is needed for testgen harness, so it can treat this source as C++
+  "// This is DPCPP" # This comment is needed for testgen harness, so it can treat this source as C++
   "#if defined(REFRUN)"
   "  #define CEAN_HEADER1(dim0) for (int cean0 = 0; cean0 != (dim0); ++ cean0) {"
   "  #define CEAN_HEADER2(dim0, dim1) for (int cean0 = 0; cean0 != (dim0); ++ cean0) { for (int cean1 = 0; cean1 != (dim1); ++ cean1) {"
@@ -448,7 +448,7 @@ for-clause ctx @
   ? le(len(new-ivs), 3)
 ::= *10 "for (" i-name "=" low-lim(ivs) "; " i-name " <= " big-lim(ivs) "; " step-pos(i-name)  ") " block(new-ctx)
   | *2  "for (" i-name "=" big-lim(ivs) "; " i-name " > "  low-lim(ivs) "; " step-neg1(i-name) ") " block(new-ctx)
-  | *1  "for (" i-name "=" big-lim(ivs) "; " i-name " <= " max-lim()    "; " step-neg(i-name)  ") " block(new-ctx)
+  | *1  "for (" i-name "=" big-lim(ivs) "; " i-name " >= " low-lim(ivs) "; " step-neg(i-name)  ") " block(new-ctx)
 
 for-clause ctx ::= "; /* for-cycle skipped due to nesting limit */"
 
@@ -692,7 +692,7 @@ ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 decl-arr a @ 
   (array,array-type) = a,
   (aname, adim) = array
-::= array-type " " aname decl-arr2(adim) ";"
+::= array-type " " aname decl-arr2(adim) " = {" const(array-type) "};"
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 

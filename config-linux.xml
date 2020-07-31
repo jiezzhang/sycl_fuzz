@@ -7,7 +7,7 @@
     <generator name="cexpr" command="python g -n 100000 cexpr.g" />
     <generator name="base" command="python g -n 100000 runcg-0.6.g" />
     <generator name="shuffle-fuzz" command="python shuffle_fuzz.py" Lang="IR" />
-    <generator name="dpcpp-base" command="python g -n 100000 runcg-0.6.g">
+    <generator name="dpcpp-base" command="python g -n 100000 runcg-0.6.g" Lang="DPCPP">
   </generators>
   <compilers>
     <compiler name="clang" compilerC="clang" compilerCpp="clang++" linkerLTO="-fuse-ld=lld" 
@@ -19,5 +19,7 @@
     <compiler name="xmain" compilerC="icx" compilerCpp="icpx" 
               ICS_bin_path="linux/bin/intel64" ICS_lib_path="linux/compiler/lib/intel64_lin" 
               arch_skx="-xCORE-AVX512" arch_native="-xHOST"/>
+    <compiler name="dpcpp" compilerC="dpcpp" compilerCpp="dpcpp" 
+              ICS_bin_path="linux/bin" ICS_lib_path="linux/compiler/lib"/>
   </compilers>
 </configuration>
