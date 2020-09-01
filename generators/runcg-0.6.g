@@ -11,49 +11,42 @@ program @
   accs    = acc-set(),
   # number of arrays to generate for each array dimension
   fsn     = (randint(0,2), randint(0,5), randint(0,3), randint(0,3)),
-  as      = (), # No global array is used
   fs      = shuffle(fun-set(fsn)), # generate function names acording to already genererated numbers
   locals  = var-set(randint(1, 4)), # function main locals
+  bufs    = buf-set(randint(2, 5)), # buffer main locals
+  buf-accs= buf-acc-set(bufs), # acc main locals
+  bufs1 = output(bufs),
+  buf-accs1 = output(buf-accs),
   vars    = union(locals, accs),   # there should be at least one variable
+  as      = buf-accs, 
   ivs     = (), # names of variables used for array indices
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
   ctx     = (vars:vars:as:ivs:fs:"void":():0:())  
 ::= {
-  "// This is DPCPP" # This comment is needed for testgen harness, so it can treat this source as C++
-  "#if defined(REFRUN)"
-  "  #define CEAN_HEADER1(dim0) for (int cean0 = 0; cean0 != (dim0); ++ cean0) {"
-  "  #define CEAN_HEADER2(dim0, dim1) for (int cean0 = 0; cean0 != (dim0); ++ cean0) { for (int cean1 = 0; cean1 != (dim1); ++ cean1) {"
-  "  #define CEAN_HEADER3(dim0, dim1, dim2) for (int cean0 = 0; cean0 != (dim0); ++ cean0) { for (int cean1 = 0; cean1 != (dim1); ++ cean1) { for (int cean2 = 0; cean2 != (dim2); ++ cean2) {"
-  "  #define CI(idx,start,dim,step) start+cean##idx*(step)"
-  "  #define CEAN_FOOTER1 }"
-  "  #define CEAN_FOOTER2 }}"
-  "  #define CEAN_FOOTER3 }}}"
-  "#else"
-  "  #define CEAN_HEADER1(dim0)"
-  "  #define CEAN_HEADER2(dim0, dim1)"
-  "  #define CEAN_HEADER3(dim0, dim1, dim2)"
-  "  #define CI(idx,start,dim,step) start:dim:step"
-  "  #define CEAN_FOOTER1"
-  "  #define CEAN_FOOTER2"
-  "  #define CEAN_FOOTER3"
-  "#endif"
   "#include \"libcpp.h\""
   "#include \"type_cast.hpp\""
   "#include <CL/sycl.hpp>"
   "using namespace cl::sycl;"
   ""
-  list-lines(as, decl-arr)
   list-lines(fs, decl-fun)
-  "template <typename T, int dims, cl::sycl::access::mode mode,"
-  "        cl::sycl::access::target target, cl::sycl::access::placeholder placeholder>"
-  "void kernel_fun(cl::sycl::nd_item<dims> item, cl::sycl::accessor<T, dims, mode, target, placeholder> result)"
-  "{"
-    declarations(locals, accs)
-    statements(ctx)
-    for-clause(ctx)
-    statements(ctx)
+  "void kernel_fun(cl::sycl::queue &queue, cl::sycl::range<1> global_range,"
+  "                cl::sycl::range<1> local_range,"
+  "                cl::sycl::buffer<ulong, 1> &buf) {"
+     declarations(bufs, accs)
+  "  queue.submit([&](cl::sycl::handler &cgh) {"
+  "    auto result = buf.template get_access<cl::sycl::access::mode::read_write>(cgh);"
+       declarations-acc(bufs,buf-accs)
+  "    cgh.parallel_for<class fuzz_kernel>("
+  "      cl::sycl::nd_range<1>(global_range, local_range),"
+  "      [=](cl::sycl::nd_item<1> item) { "
+          declarations(locals, accs)
+          statements(ctx)
+          for-clause(ctx)
+          statements(ctx)
+  "    });"
+  "  });"
   "}"
-  fun-defs(fs, as, fs)
+  fun-defs(fs, (), fs)
 }
 
 fun-defs () _ _ ::= ""
@@ -78,17 +71,48 @@ named-fun-sig ftype:ftypes param:params @
 ####################################################################################################
 # declarations                                                                                     # 
 ####################################################################################################
+declaration x values @ 
+  new-ctx = (():values:():():():"void":():0:()),
+  (variable, var-type) = x
+? is-str(var-type)
+::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
 
 declaration x values @ 
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
-::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
+? in("buffer", var-type)
+::= declaration-buf(x, values)
+
+declaration x values ::= "; //incorrect declaration"
+
+declaration-buf x values @
+  new-ctx = (():values:():():():"void":():0:()),
+  (variable, var-type) = x,
+  (_, real-type) = var-type
+::= {
+real-type " " variable "_ptr[" array-size() "] = {" const(real-type) "};"
+"cl::sycl::buffer<" real-type "> " variable  " (" variable "_ptr, cl::sycl::range(" array-size() "));"
+} 
+
+#TODO: Apply other mode
+declaration-acc buff buf-acc @
+  (buf-name, buf-type) = buff,
+  (buf-acc-detail, buf-acc-type) = buf-acc,
+  (buf-acc-name, buf-acc-dim) =buf-acc-detail
+::= "auto " buf-acc-name " = " buf-name ".template get_access<cl::sycl::access::mode::read_write>(cgh);"
 
 declarations () _ ::= ""
 declarations x:xs values
 ::= {
   declaration(x, values)
   declarations(xs, (x:values)) }
+
+declarations-acc () () ::= ""
+declarations-acc buff:bufs buf-acc:buf-accs
+::= {
+  declaration-acc(buff, buf-acc)
+  declarations-acc(bufs, buf-accs)
+}
 
 ####################################################################################################
 # statements                                                                                       #
@@ -720,6 +744,7 @@ decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) "
 #################################################################################################### 
 acc-set            ::= set-gen(acc, global_acc_type, (), 1)
 var-set n          ::= set-gen(var, type, (), n)
+buf-set n          ::= set-gen(buf, buf_type, (), n)
 int-set n          ::= set-gen(int, integer_type, (), n)
 arr-set l          ::= arr-set2(l, 1)
 arr-set2 () _      ::= ()
@@ -770,6 +795,18 @@ fun-name f @ (fname:_) = f ::= fname
 fun-names () ::= ()
 fun-names f:l @ (fname:_) = f ::= fname:fun-names(l)
 
+#TODO: need to add support for acc dims
+buf-acc-set ()     ::= ()
+buf-acc-set n:bufs @
+  l = buf-acc-set1(n),
+  i = buf-acc-set(bufs)
+::= l:i
+buf-acc-set1 n @
+  (buf-var, buf-type) = n,
+  (_, real-type) = buf-type,
+  acc-name = (buf-var "_acc", 1)
+::= (acc-name, real-type)
+
 getn 0 _ ::= ()
 getn l s ? neq(len(s),0) ::= get(s, 0) : getn(sub(l,1), tail(s))
 getn l _ ::= ()
@@ -799,6 +836,7 @@ set-uniq-fun-var n param @
 ####################################################################################################
 acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
+buf _      ::= "buf_" int() | *1000 "buf_" identifier()
 int _      ::= int()
 #TODO: Add more const type definition
 const T @ i-types = integer-type-sets() ? in(T, i-types)
@@ -850,6 +888,11 @@ type-cast exp expT dstT @
 ? and(or(in(expT, group-types), in(dstT, group-types)), neq(expT, dstT))
 ::= cast(exp, dstT)
 type-cast exp expT dstT ::= exp
+
+#TODO: Should we support more dims?
+buf_type @
+  tmp_type = type()
+::= ("buffer", tmp_type)
 
 type
 ::= *100 scalar_type()
