@@ -9,17 +9,19 @@ array-size ::= mul(max-loop-len(), 3)
 
 program @
   accs    = acc-set(),
+  structs = struct-set(randint(1, 3)),
+  structs1= output(structs),
   # number of arrays to generate for each array dimension
   fsn     = (randint(0,2), randint(0,5), randint(0,3), randint(0,3)),
   fs      = shuffle(fun-set(fsn)), # generate function names acording to already genererated numbers
   locals  = var-set(randint(1, 4)), # function main locals
   bufs    = buf-set(randint(2, 5)), # buffer main locals
   buf-accs= buf-acc-set(bufs), # acc main locals
-  bufs1 = output(bufs),
-  buf-accs1 = output(buf-accs),
   vars    = union(locals, accs),   # there should be at least one variable
   as      = buf-accs, 
   ivs     = (), # names of variables used for array indices
+  #TODO:PASS SELFDEFINED TYPE BY CTX 
+  #TODO:RECORD GLOBAL TYPE IN PYTHON ARGUMENTS??
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
   ctx     = (vars:vars:as:ivs:fs:"void":():0:())  
 ::= {
@@ -28,6 +30,7 @@ program @
   "#include <CL/sycl.hpp>"
   "using namespace cl::sycl;"
   ""
+  list-lines(structs, decl-struct)
   list-lines(fs, decl-fun)
   "void kernel_fun(cl::sycl::queue &queue, cl::sycl::range<1> global_range,"
   "                cl::sycl::range<1> local_range,"
@@ -739,6 +742,21 @@ fun-call2 i:l ctx ::= ", " expr(ctx, i) fun-call2(l, ctx)
 
 decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) ");"
 
+decl-struct s @ 
+  (sname,stype) = s,
+  (s1,elem,p_elem) = stype,
+  elem1 = output(elem),
+  p_elem1 = output(p_elem)
+::= 
+{
+  "struct " sname " {"
+  list-lines(elem, decl-var)
+  list-lines(p_elem, decl-var)
+  "};"
+}
+
+decl-var v @ (vname,vtype) = v ::= vtype " " vname ";"
+
 ####################################################################################################
 # sets                                                                                             #
 #################################################################################################### 
@@ -746,6 +764,7 @@ acc-set            ::= set-gen(acc, global_acc_type, (), 1)
 var-set n          ::= set-gen(var, type, (), n)
 buf-set n          ::= set-gen(buf, buf_type, (), n)
 int-set n          ::= set-gen(int, integer_type, (), n)
+struct-set n       ::= set-gen(struct, struct_type, (), n)
 arr-set l          ::= arr-set2(l, 1)
 arr-set2 () _      ::= ()
 arr-set2 n:l dim   ::= cat(arr-set-gen(dim, n), arr-set2(l, add(dim, 1)))
@@ -796,6 +815,7 @@ fun-names () ::= ()
 fun-names f:l @ (fname:_) = f ::= fname:fun-names(l)
 
 #TODO: need to add support for acc dims
+#TODO: Add placeholder
 buf-acc-set ()     ::= ()
 buf-acc-set n:bufs @
   l = buf-acc-set1(n),
@@ -836,6 +856,7 @@ set-uniq-fun-var n param @
 ####################################################################################################
 acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
+struct _   ::= "struct_" int() | *1000 "struct_" identifier()
 buf _      ::= "buf_" int() | *1000 "buf_" identifier()
 int _      ::= int()
 #TODO: Add more const type definition
@@ -893,6 +914,26 @@ type-cast exp expT dstT ::= exp
 buf_type @
   tmp_type = type()
 ::= ("buffer", tmp_type)
+
+struct_type @
+  elem_types = struct_elem_types(randint(1,3), 0),
+  ptr_types = struct_elem_types(randint(0,1), 1)
+::= ("struct", elem_types, ptr_types)
+
+struct_elem_types 0 _ ::= ()
+struct_elem_types n isptr @
+  l = ptr_type(),
+  v = var(""),
+  i = struct_elem_types(sub(n,1), isptr)
+? eq(isptr, 1)
+::= (v, l):i
+struct_elem_types n isptr @
+  l = type(),
+  v = var(""),
+  i = struct_elem_types(sub(n,1), isptr)
+::= (v, l):i
+
+ptr_type ::= type() "*"
 
 type
 ::= *100 scalar_type()
