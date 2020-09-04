@@ -10,13 +10,13 @@ array-size ::= mul(max-loop-len(), 3)
 program @
   accs    = acc-set(),
   structs = struct-set(randint(1, 3)),
-  structs1= output(structs),
   # number of arrays to generate for each array dimension
   fsn     = (randint(0,2), randint(0,5), randint(0,3), randint(0,3)),
   fs      = shuffle(fun-set(fsn)), # generate function names acording to already genererated numbers
   locals  = var-set(randint(1, 4)), # function main locals
   bufs    = buf-set(randint(2, 5)), # buffer main locals
   buf-accs= buf-acc-set(bufs), # acc main locals
+  buf-accs1 = output(buf-accs),
   vars    = union(locals, accs),   # there should be at least one variable
   as      = buf-accs, 
   ivs     = (), # names of variables used for array indices
@@ -101,8 +101,19 @@ real-type " " variable "_ptr[" array-size() "] = {" const(real-type) "};"
 declaration-acc buff buf-acc @
   (buf-name, buf-type) = buff,
   (buf-acc-detail, buf-acc-type) = buf-acc,
+  buf-acc-real-type = constsub(buf-acc-type),
+  (buf-acc-name, buf-acc-dim) = buf-acc-detail
+? in("const", buf-acc-type)
+::= "cl::sycl::accessor <" buf-acc-real-type ", 1, cl::sycl::access::mode::read> " buf-acc-name "(" buf-name ", cgh);"
+  | "cl::sycl::accessor <" buf-acc-real-type ", 1, cl::sycl::access::mode::read, cl::sycl::access::target::constant_buffer> " buf-acc-name "(" buf-name ", cgh);"
+
+
+declaration-acc buff buf-acc @
+  (buf-name, buf-type) = buff,
+  (buf-acc-detail, buf-acc-type) = buf-acc,
   (buf-acc-name, buf-acc-dim) =buf-acc-detail
-::= "auto " buf-acc-name " = " buf-name ".template get_access<cl::sycl::access::mode::read_write>(cgh);"
+#::= "auto " buf-acc-name " = " buf-name ".template get_access<cl::sycl::access::mode::read_write>(cgh);"
+::= "cl::sycl::accessor <" buf-acc-type ", 1, cl::sycl::access::mode::read_write> " buf-acc-name "(" buf-name ", cgh);"
 
 declarations () _ ::= ""
 declarations x:xs values
@@ -217,7 +228,7 @@ block ctx @
 lv-assign ctx @
   lv = lval(ctx),
   (lv-exp, lv-type) = lv
-? islval (ctx)
+? and(islval (ctx), not(in("const", lv-type)))
 ::= *10 lv-exp " " assign-op() " " expr(ctx, lv-type) ";"
   | *2  plusplus(ctx) ";"
 
@@ -744,9 +755,7 @@ decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) "
 
 decl-struct s @ 
   (sname,stype) = s,
-  (s1,elem,p_elem) = stype,
-  elem1 = output(elem),
-  p_elem1 = output(p_elem)
+  (s1,elem,p_elem) = stype
 ::= 
 {
   "struct " sname " {"
@@ -816,6 +825,7 @@ fun-names f:l @ (fname:_) = f ::= fname:fun-names(l)
 
 #TODO: need to add support for acc dims
 #TODO: Add placeholder
+#TODO: Add support for target and mode
 buf-acc-set ()     ::= ()
 buf-acc-set n:bufs @
   l = buf-acc-set1(n),
@@ -825,7 +835,8 @@ buf-acc-set1 n @
   (buf-var, buf-type) = n,
   (_, real-type) = buf-type,
   acc-name = (buf-var "_acc", 1)
-::= (acc-name, real-type)
+::= *1 (acc-name, real-type)
+  | *1 (acc-name, "const " real-type)
 
 getn 0 _ ::= ()
 getn l s ? neq(len(s),0) ::= get(s, 0) : getn(sub(l,1), tail(s))
@@ -893,22 +904,38 @@ cast exp T
 # TODO: will cast vector type
 # Supported cast: int2double, double2int
 type-cast exp expT dstT @
+    expT1 = constsub(expT),
+    dstT1 = constsub(dstT) 
+? and(in("const", expT), in("const", dstT))
+::= type-cast1(exp, expT1, dstT1)
+type-cast exp expT dstT @
+    expT1 = constsub(expT)
+? in("const", expT)
+::= type-cast1(exp, expT1, dstT)
+type-cast exp expT dstT @
+    dstT1 = constsub(dstT) 
+? in("const", dstT)
+::= type-cast1(exp, expT, dstT1)
+type-cast exp expT dstT
+::= type-cast1(exp, expT, dstT)
+
+type-cast1 exp expT dstT @
     half-types = "cl::sycl::cl_half"
 ? or(eq(expT, half-types), eq(dstT, half-types))
 ::= cast(exp, dstT)
-type-cast exp expT dstT @
+type-cast1 exp expT dstT @
     group-types = float-type-sets()
 ? and(in(expT, group-types), not(in(dstT, group-types)))
 ::= cast(exp, dstT)
-type-cast exp expT dstT @
+type-cast1 exp expT dstT @
     group-types = integer-type-sets()
 ? and(in(expT, group-types), not(in(dstT, group-types)))
 ::= cast(exp, dstT)
-type-cast exp expT dstT @
+type-cast1 exp expT dstT @
     group-types = vector-type-sets()
 ? and(or(in(expT, group-types), in(dstT, group-types)), neq(expT, dstT))
 ::= cast(exp, dstT)
-type-cast exp expT dstT ::= exp
+type-cast1 exp expT dstT ::= exp
 
 #TODO: Should we support more dims?
 buf_type @

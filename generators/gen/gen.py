@@ -49,6 +49,7 @@ class Builtins:
             'range'     : self.range,
             'shuffle'   : self.shuffle,
             'str'       : self.toString,
+            'constsub'  : self.constsub,
             'num'       : self.toNumber,
             'add'       : self.add,
             'sub'       : self.sub,
@@ -160,14 +161,17 @@ class Builtins:
                 "any called upon an empty list" )
 
     def anyTypes(self, args):
-        """ return any element of a list with specified type """
+        """ return any element of a list with specified type 
+            Ignore const type name
+        """
         self.checkListOfSameType(self.anyTypes.func_name,args,2,list)
         try: 
             ctx_vars = args[0]
             permit_vars = []
             types = args[1]
             for v in ctx_vars:
-                if v[1] in types:
+                t = v[1].replace("const ", "")
+                if t in types:
                     permit_vars.append(v)
             if len(permit_vars) == 0:
                 return "EMPTY"
@@ -226,7 +230,7 @@ class Builtins:
         """ returns True if elements contained in list
             in('x', l)
         """
-        self.check(self.contains.func_name,args,2,[None,list])
+        self.check(self.contains.func_name,args,2,[None,None])
         return args[0] in args[1]
 
     def unique(self,args):
@@ -556,7 +560,16 @@ class Builtins:
             self.runtimeError(
                 "unable to convert `%s' to number" % str(ve) )
         return x
-        
+
+    def constsub(self,args):
+        """ substract:
+            constsub("const int") = "int"
+            constsub("const unsigned int") = "int"
+        """
+        self.check(self.add.func_name,args,1,[str])
+        l = args[0].replace("const ", "")
+        return l
+
     # arithmetics
     def add(self,args):
         """ arithmetic plus operator:
