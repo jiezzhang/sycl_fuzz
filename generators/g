@@ -35,7 +35,7 @@ def main():
         dest="limit",
         type="int",
         default=4096,
-        help="limit an amount of generated objects (default: 4096)",
+        help="limit an amount of generated objects. Disable it for complex code (default: 4096)",
         metavar="N" )
     parser.add_option( "-d", "--debug",
         dest="debug",

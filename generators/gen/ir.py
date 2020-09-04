@@ -78,8 +78,8 @@ class Expr:
         raise "Must be implemented"
 
     def checkLen(self,vars):
-        if counter.cur > counter.count:
-            counter.fin = True
+#        if counter.cur > counter.count:
+#            counter.fin = True
         counter.cur += 1
 
 class Roulette:
