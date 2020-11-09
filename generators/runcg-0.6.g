@@ -244,7 +244,7 @@ lval ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(lv), 0)
   |    lval2(ctx)
 lval ctx ::= lval2(ctx)
 
-lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 any(lv)
+lval1 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ::= *4 scal-val(any(lv))
 
 lval2 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), and(neq(len(ivs), 0), eq(ret, "void")))
 ::= lval3(ctx)
@@ -486,7 +486,7 @@ for-clause ctx @
   ? le(len(new-ivs), 3)
 ::= *10 "for (" i-name "=" low-lim(ivs) "; " i-name " <= " big-lim(ivs) "; " step-pos(i-name)  ") " block(new-ctx)
   | *2  "for (" i-name "=" big-lim(ivs) "; " i-name " > "  low-lim(ivs) "; " step-neg1(i-name) ") " block(new-ctx)
-  | *1  "for (" i-name "=" big-lim(ivs) "; " i-name " >= " low-lim(ivs) "; " step-neg(i-name)  ") " block(new-ctx)
+
 
 for-clause ctx ::= "; /* for-cycle skipped due to nesting limit */"
 
@@ -552,8 +552,8 @@ expr-term ctx T
   | *24 try-fun-call(ctx, T)
   | *1 "(" expr(ctx, T) ")"
   | *1 "(" expr(ctx, T) ", " expr(ctx, T) ")"
-  | *1 "(" cond(ctx) " ? " expr(ctx, T) " : " expr(ctx, T) ")"
-  | *1 div-expr(ctx, T)
+  #| *1 "(" cond(ctx) " ? " expr(ctx, T) " : " expr(ctx, T) ")"
+  #| *1 div-expr(ctx, T)
 
 #Jie: won't try %. That will limit rval data type
 div-expr ctx T @ 
@@ -575,6 +575,7 @@ rvalint ctx @
 ::= rval(ctx, int-type)
 
 #Jie: If no rval can be found, use const instead
+#TODO: Support struct rval!!!! lval support for struct is finished by select member of struct
 rval ctx T ? not(isrval(ctx)) ::= const(T)
 
 rval ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? neq(len(rv), 0)
@@ -709,6 +710,13 @@ list-lines i:l foo
   foo(i,) # ASK TOLIK: why "foo(i,)" and not "foo(i)"?
   list-lines(l, foo) }
 
+scal-val a @
+  (a-name, a-type) = a,
+  (dummy-type, elems, ptrs) = a-type
+? in("struct", a-type)
+::= any(elems)
+scal-val a ::= a
+
 ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
 ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "double", "size_t") "]" ivs-val2(sub(adim, 1), ctx)
@@ -825,7 +833,6 @@ fun-names f:l @ (fname:_) = f ::= fname:fun-names(l)
 
 #TODO: need to add support for acc dims
 #TODO: Add placeholder
-#TODO: Add support for target and mode
 buf-acc-set ()     ::= ()
 buf-acc-set n:bufs @
   l = buf-acc-set1(n),

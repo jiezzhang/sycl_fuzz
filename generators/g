@@ -8,6 +8,8 @@ from gen import reader, syntax, ir, gen
 import sys
 from optparse import OptionParser
 
+sys.setrecursionlimit(10000)
+
 version = "0.8.9"
 
 def main():
