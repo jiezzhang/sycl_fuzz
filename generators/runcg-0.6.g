@@ -78,6 +78,11 @@ declaration x values @
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
 ? is-str(var-type)
+::= declaration-var(x, values)
+
+declaration-var x values @
+  new-ctx = (():values:():():():"void":():0:()),
+  (variable, var-type) = x
 ::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
 
 declaration x values @ 
@@ -197,7 +202,7 @@ block ctx @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
   locals = diff_axis(var-set(randint(0,4)), rv, 0),
   local-asn = (randint(0,2), randint(0,0), randint(0,0)),
-  local-as = diff_axis(arr-set(local-asn), rv, 0),
+  local-as = diff_axis(arr-set(local-asn), as, 0),
   new-lv = union(lv, locals),
   new-rv = union(rv, locals),
   new-as = union(as, local-as),

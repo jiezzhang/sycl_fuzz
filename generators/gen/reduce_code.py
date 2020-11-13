@@ -1,0 +1,10 @@
+candidate=['declaration-var',
+           'lv-assign',
+           'for-clause',
+           'if-clause',
+           'block',
+           'switch-clause',
+           'break-stmt',
+           'continue-stmt',
+           'return-stmt',
+           'decl-arr']
