@@ -781,6 +781,7 @@ decl-var v @ (vname,vtype) = v ::= vtype " " vname ";"
 #################################################################################################### 
 acc-set            ::= set-gen(acc, global_acc_type, (), 1)
 var-set n          ::= set-gen(var, type, (), n)
+ptr-set n          ::= set-gen(ptr, type, (), n)
 buf-set n          ::= set-gen(buf, buf_type, (), n)
 int-set n          ::= set-gen(int, integer_type, (), n)
 struct-set n       ::= set-gen(struct, struct_type, (), n)
@@ -876,6 +877,7 @@ set-uniq-fun-var n param @
 ####################################################################################################
 acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
+ptr _      ::= "p_" int() | *1000 "p_" identifier()
 struct _   ::= "struct_" int() | *1000 "struct_" identifier()
 buf _      ::= "buf_" int() | *1000 "buf_" identifier()
 int _      ::= int()
@@ -952,22 +954,9 @@ buf_type @
 ::= ("buffer", tmp_type)
 
 struct_type @
-  elem_types = struct_elem_types(randint(1,3), 0),
-  ptr_types = struct_elem_types(randint(0,1), 1)
+  elem_types = var-set(randint(1,3)),
+  ptr_types = ptr-set(randint(0,1))
 ::= ("struct", elem_types, ptr_types)
-
-struct_elem_types 0 _ ::= ()
-struct_elem_types n isptr @
-  l = ptr_type(),
-  v = var(""),
-  i = struct_elem_types(sub(n,1), isptr)
-? eq(isptr, 1)
-::= (v, l):i
-struct_elem_types n isptr @
-  l = type(),
-  v = var(""),
-  i = struct_elem_types(sub(n,1), isptr)
-::= (v, l):i
 
 ptr_type ::= type() "*"
 
