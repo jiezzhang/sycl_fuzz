@@ -32,16 +32,16 @@ program @
   ""
   list-lines(structs, decl-struct)
   list-lines(fs, decl-fun)
-  "void kernel_fun(cl::sycl::queue &queue, cl::sycl::range<1> global_range,"
-  "                cl::sycl::range<1> local_range,"
-  "                cl::sycl::buffer<ulong, 1> &buf) {"
+  "void kernel_fun(queue &queue, range<1> global_range,"
+  "                range<1> local_range,"
+  "                buffer<ulong, 1> &buf) {"
      declarations(bufs, accs)
-  "  queue.submit([&](cl::sycl::handler &cgh) {"
-  "    auto result = buf.template get_access<cl::sycl::access::mode::read_write>(cgh);"
+  "  queue.submit([&](handler &cgh) {"
+  "    auto result = buf.template get_access<access::mode::read_write>(cgh);"
        declarations-acc(bufs,buf-accs)
   "    cgh.parallel_for<class fuzz_kernel>("
-  "      cl::sycl::nd_range<1>(global_range, local_range),"
-  "      [=](cl::sycl::nd_item<1> item) { "
+  "      nd_range<1>(global_range, local_range),"
+  "      [=](nd_item<1> item) { "
           declarations(locals, accs)
           statements(ctx)
           for-clause(ctx)
@@ -94,7 +94,7 @@ declaration-buf x values @
   (_, real-type) = var-type
 ::= {
 real-type " " variable "_ptr[" array-size() "] = {" const(real-type) "};"
-"cl::sycl::buffer<" real-type "> " variable  " (" variable "_ptr, cl::sycl::range(" array-size() "));"
+"buffer<" real-type "> " variable  " (" variable "_ptr, range(" array-size() "));"
 } 
 
 #TODO: Apply other mode
@@ -104,16 +104,16 @@ declaration-acc buff buf-acc @
   buf-acc-real-type = constsub(buf-acc-type),
   (buf-acc-name, buf-acc-dim) = buf-acc-detail
 ? in("const", buf-acc-type)
-::= "cl::sycl::accessor <" buf-acc-real-type ", 1, cl::sycl::access::mode::read> " buf-acc-name "(" buf-name ", cgh);"
-  | "cl::sycl::accessor <" buf-acc-real-type ", 1, cl::sycl::access::mode::read, cl::sycl::access::target::constant_buffer> " buf-acc-name "(" buf-name ", cgh);"
+::= "accessor <" buf-acc-real-type ", 1, access::mode::read> " buf-acc-name "(" buf-name ", cgh);"
+  | "accessor <" buf-acc-real-type ", 1, access::mode::read, access::target::constant_buffer> " buf-acc-name "(" buf-name ", cgh);"
 
 
 declaration-acc buff buf-acc @
   (buf-name, buf-type) = buff,
   (buf-acc-detail, buf-acc-type) = buf-acc,
   (buf-acc-name, buf-acc-dim) =buf-acc-detail
-#::= "auto " buf-acc-name " = " buf-name ".template get_access<cl::sycl::access::mode::read_write>(cgh);"
-::= "cl::sycl::accessor <" buf-acc-type ", 1, cl::sycl::access::mode::read_write> " buf-acc-name "(" buf-name ", cgh);"
+#::= "auto " buf-acc-name " = " buf-name ".template get_access<access::mode::read_write>(cgh);"
+::= "accessor <" buf-acc-type ", 1, access::mode::read_write> " buf-acc-name "(" buf-name ", cgh);"
 
 declarations () _ ::= ""
 declarations x:xs values
@@ -541,8 +541,10 @@ cond ctx @
 #TODO: vector support start here
 expr ctx T ::= expr-term(ctx, T) expr-T(ctx, T)
 
+#Jie: limit line length by removing expr-T 
 expr-T ctx T
-::= *1 " " binary-op(T) " " expr-term(ctx, T) expr-T(ctx, T)
+::= *1 " " binary-op(T) " " expr-term(ctx, T)
+  #| *1 " " binary-op(T) " " expr-term(ctx, T) expr-T(ctx, T)
   | *3 ""
 
 expr-term ctx T
@@ -927,7 +929,7 @@ type-cast exp expT dstT
 ::= type-cast1(exp, expT, dstT)
 
 type-cast1 exp expT dstT @
-    half-types = "cl::sycl::cl_half"
+    half-types = "cl_half"
 ? or(eq(expT, half-types), eq(dstT, half-types))
 ::= cast(exp, dstT)
 type-cast1 exp expT dstT @
@@ -980,8 +982,8 @@ scalar_type
 integer_type
 ::= cpp_type()
   | unsigned_cpp_type()
-  | cl_type()
-  | unsigned_cl_type()
+  #| cl_type()
+  #| unsigned_cl_type()
 
 cpp_type
 ::= *24 "int"
@@ -994,31 +996,31 @@ unsigned_cpp_type
 ::= "unsigned " cpp_type()
 
 cl_type
-::= *24 "cl::sycl::cl_char"
-  | *2  "cl::sycl::cl_short"
-  | *2  "cl::sycl::cl_int"
-  | *2  "cl::sycl::cl_long"
+::= *24 "cl_char"
+  | *2  "cl_short"
+  | *2  "cl_int"
+  | *2  "cl_long"
 
 
 unsigned_cl_type
-::= *24 "cl::sycl::cl_uchar"
-  | *2  "cl::sycl::cl_ushort"
-  | *2  "cl::sycl::cl_uint"
-  | *2  "cl::sycl::cl_ulong"
+::= *24 "cl_uchar"
+  | *2  "cl_ushort"
+  | *2  "cl_uint"
+  | *2  "cl_ulong"
 
 float_type
 ::= "float"
   | "double"
-  | "cl::sycl::cl_double"
-  | "cl::sycl::cl_half"
-  | "cl::sycl::cl_float"
+  #| "cl_double"
+  #| "cl_half"
+  #| "cl_float"
 
 vec_type ::= vec_elem_type() vec_dims() 
 
 vec_elem_type
-::= "char" | "short" | "int" | "long" | "float" | "double" | "half" | "cl::sycl::cl_char" | "cl::sycl::cl_uchar" 
-  | "cl::sycl::cl_short" | "cl::sycl::cl_ushort" | "cl::sycl::cl_int" | "cl::sycl::cl_uint" | "cl::sycl::cl_long" | "cl::sycl::cl_ulong" | "cl::sycl::cl_float" 
-  | "cl::sycl::cl_double" | "cl::sycl::cl_half"
+::= "char" | "short" | "int" | "long" | "float" | "double" | "half" 
+  #| "cl_char" | "cl_uchar"   | "cl_double" | "cl_half"
+  #| "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float" 
   | "schar" | "uchar" | "ushort" | "uint" | "ulong" | "longlong" | "ulonglong"
 
 vec_dims
@@ -1038,25 +1040,25 @@ letter
 # some type sets                                                                                   #  
 ####################################################################################################
 #TODO: half and double type !
-float-type-set ::= "float","double","cl::sycl::cl_double","cl::sycl::cl_half","cl::sycl::cl_float"
+float-type-set ::= "float","double","half"
 cpp-integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
-cl-integer-type-set ::= "cl::sycl::cl_char","cl::sycl::cl_short","cl::sycl::cl_int","cl::sycl::cl_long","cl::sycl::cl_uchar","cl::sycl::cl_ushort","cl::sycl::cl_uint","cl::sycl::cl_ulong"
+#cl-integer-type-set ::= "cl_char","cl_short","cl_int","cl_long","cl_uchar","cl_ushort","cl_uint","cl_ulong"
 
 float-type-sets ::= float-type-set()
-integer-type-sets ::= cat(cpp-integer-type-set(),cl-integer-type-set())
+integer-type-sets ::= cpp-integer-type-set()
 scalar-type-sets ::= cat(float-type-set(), integer-type-sets())
 
-int-vector-elem-type-set2 ::= "char2","short2","int2","long2","cl::sycl::cl_char2","cl::sycl::cl_uchar2","cl::sycl::cl_short2","cl::sycl::cl_ushort2","cl::sycl::cl_int2","cl::sycl::cl_uint2","cl::sycl::cl_long2","cl::sycl::cl_ulong2","schar2","uchar2","ushort2","uint2","ulong2","longlong2","ulonglong2"
-int-vector-elem-type-set3 ::= "char3","short3","int3","long3","cl::sycl::cl_char3","cl::sycl::cl_uchar3","cl::sycl::cl_short3","cl::sycl::cl_ushort3","cl::sycl::cl_int3","cl::sycl::cl_uint3","cl::sycl::cl_long3","cl::sycl::cl_ulong3","schar3","uchar3","ushort3","uint3","ulong3","longlong3","ulonglong3"
-int-vector-elem-type-set4 ::= "char4","short4","int4","long4","cl::sycl::cl_char4","cl::sycl::cl_uchar4","cl::sycl::cl_short4","cl::sycl::cl_ushort4","cl::sycl::cl_int4","cl::sycl::cl_uint4","cl::sycl::cl_long4","cl::sycl::cl_ulong4","schar4","uchar4","ushort4","uint4","ulong4","longlong4","ulonglong4"
-int-vector-elem-type-set8 ::= "char8","short8","int8","long8","cl::sycl::cl_char8","cl::sycl::cl_uchar8","cl::sycl::cl_short8","cl::sycl::cl_ushort8","cl::sycl::cl_int8","cl::sycl::cl_uint8","cl::sycl::cl_long8","cl::sycl::cl_ulong8","schar8","uchar8","ushort8","uint8","ulong8","longlong8","ulonglong8"
-int-vector-elem-type-set16 ::= "char16","short16","int16","long16","cl::sycl::cl_char16","cl::sycl::cl_uchar16","cl::sycl::cl_short16","cl::sycl::cl_ushort16","cl::sycl::cl_int16","cl::sycl::cl_uint16","cl::sycl::cl_long16","cl::sycl::cl_ulong16","schar16","uchar16","ushort16","uint16","ulong16","longlong16","ulonglong16"
+int-vector-elem-type-set2 ::= "char2","short2","int2","long2","schar2","uchar2","ushort2","uint2","ulong2","longlong2","ulonglong2"
+int-vector-elem-type-set3 ::= "char3","short3","int3","long3","schar3","uchar3","ushort3","uint3","ulong3","longlong3","ulonglong3"
+int-vector-elem-type-set4 ::= "char4","short4","int4","long4","schar4","uchar4","ushort4","uint4","ulong4","longlong4","ulonglong4"
+int-vector-elem-type-set8 ::= "char8","short8","int8","long8","schar8","uchar8","ushort8","uint8","ulong8","longlong8","ulonglong8"
+int-vector-elem-type-set16 ::= "char16","short16","int16","long16","schar16","uchar16","ushort16","uint16","ulong16","longlong16","ulonglong16"
 
-float-vector-elem-type-set2 ::= "float2","double2","half2","cl::sycl::cl_float2","cl::sycl::cl_double2","cl::sycl::cl_half2"
-float-vector-elem-type-set3 ::= "float3","double3","half3","cl::sycl::cl_float3","cl::sycl::cl_double3","cl::sycl::cl_half3"
-float-vector-elem-type-set4 ::= "float4","double4","half4","cl::sycl::cl_float4","cl::sycl::cl_double4","cl::sycl::cl_half4"
-float-vector-elem-type-set8 ::= "float8","double8","half8","cl::sycl::cl_float8","cl::sycl::cl_double8","cl::sycl::cl_half8"
-float-vector-elem-type-set16 ::= "float16","double16","half16","cl::sycl::cl_float16","cl::sycl::cl_double16","cl::sycl::cl_half16"
+float-vector-elem-type-set2 ::= "float2","double2","half2"
+float-vector-elem-type-set3 ::= "float3","double3","half3"
+float-vector-elem-type-set4 ::= "float4","double4","half4"
+float-vector-elem-type-set8 ::= "float8","double8","half8"
+float-vector-elem-type-set16 ::= "float16","double16","half16"
 
 integer-vector-type-sets @
   set1 = cat(int-vector-elem-type-set2(), int-vector-elem-type-set3()),
