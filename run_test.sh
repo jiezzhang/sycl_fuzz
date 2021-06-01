@@ -2,18 +2,15 @@ export ICS_START=/rdrive/ics/itools/unx/bin
 source $ICS_START/icssetup.sh
 source $ICS_START/icsenv.sh
 
-ics ws -archive deploy_xmain xmainefi2linux 20200713_000000
-ics config -ws xmainefi2linux prod gcc=7.5.0 ld=bfd
+ics ws -archive deploy_xmain-rel xmainefi2linux 20210524_160000
+ics config -ws xmainefi2linux prod gcc=9.3.0 ld=bfd
 ics set context ws host
 
 result_root=/export/users/jiezhang/fuzz_result
 source_root=/export/users/jiezhang/fuzz_source
 fuzz_root=`pwd`;
 
-build_option["cpu"]="-fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice";
-build_option["gpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"";
-build_option["oclgpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"";
-build_option["acc"]="-fintelfpga";
+declare -A build_option=( ["cpu"]="-fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice" ["gpu"]='-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs "-device *"' ["oclgpu"]='-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs "-device *"' [acc]="-fintelfpga")
 
 if [ ! -d "$result_root" ]
 then
@@ -28,8 +25,8 @@ cd $fuzz_root;
 
 num=0;
 compile_cmd="dpcpp -o test.run sycl_launcher.cpp libcpp.cpp -DPARALLEL_FOR_ND_RANGE -Wno-everything";
-#while [ 1 ]
-#do
+while [ 1 ]
+do
     rm -rf $source_root/*
     cp -r ../test/* $source_root;
     date=`date +"%Y%m%d" --date="1 days ago"`;
@@ -40,40 +37,60 @@ compile_cmd="dpcpp -o test.run sycl_launcher.cpp libcpp.cpp -DPARALLEL_FOR_ND_RA
         mkdir $output_root;
     fi
 
-    python g -n 100000 runcg-0.6.g -f $source_root/kernel_impl.hpp;
+    while [ 1 ]
+    do
+    	python2 g -n 900000000 runcg-0.6.g -f $source_root/kernel.hpp>out.log 2>&1;
+    	grep "exceed" out.log > /dev/null 2>&1
+    	out=$?
+
+    	if [[ $out == 1 ]]
+   	then
+		echo $out
+		break
+	fi
+    done
     cd $source_root;
     result="";
     num=$(($num+1));
     echo "TEST $num:";
 
-    for i in {"O0","O1","O2","O3"}
+    for i in {"O1","O2","O3"}
     do
         for j in {"JIT","AOT"}
         do
             for k in {"cpu","gpu","oclgpu","acc"}
             do
                 # Build test
+                # Build test
                 if [[ $j == "JIT" ]]
                 then
-                    $compile_cmd -$i >compile_$i_$j.log 2>&1;
+                    $compile_cmd -$i >compile_$i\_$j.log 2>&1;
+                elif [[ $j == "AOT" && $k =~ gpu ]]
+                then
+                    sh gpu_aot.sh >compile_$i\_$j\_$k.log 2>&1;
                 else
-                    $compile_cmd -$i ${build_option[$k]} >compile_$i_$j.log 2>&1;
+                    $compile_cmd -$i ${build_option[$k]} >compile_$i\_$j\_$k.log 2>&1;
                 fi
                 cmd_output=$?;
                 if [[ $cmd_output != 0 ]]
                 then
-                    result="Compile fail in $i $j with $cmd_output";
+                    result="Compile fail in $i $j $k with $cmd_output";
                     echo $result;
                     continue;
                 fi 
 
                 # Run test
+                if [[ $i == "O0" ]] && [[ $k == *"gpu"* ]]
+                then
+                    continue;
+                fi
                 env_var=""
                 if [[ $k == "oclgpu" ]]
                 then
-                    env_var="SYCL_BE=PI_OPENCL"
-                fi
-                $env_var timeout 10m ./test.run -p intel -d $k > run_$i\_$j\_$k.log 2>&1;
+                    SYCL_BE=PI_OPENCL timeout 10m ./test.run -p intel -d gpu > run_$i\_$j\_$k.log 2>&1;
+                else
+                    timeout 10m ./test.run -p intel -d $k > run_$i\_$j\_$k.log 2>&1
+                fi	
                 cmd_output=$?;
                 if [[ $cmd_output != 0 ]]
                 then
@@ -90,6 +107,6 @@ compile_cmd="dpcpp -o test.run sycl_launcher.cpp libcpp.cpp -DPARALLEL_FOR_ND_RA
     else
         echo "PASS";
     fi
-
+    rm -rf $source_root/kernel*
     cd $fuzz_root;
-#done
+done

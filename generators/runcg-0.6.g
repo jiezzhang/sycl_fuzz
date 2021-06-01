@@ -78,11 +78,6 @@ declaration x values @
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
 ? is-str(var-type)
-::= declaration-var(x, values)
-
-declaration-var x values @
-  new-ctx = (():values:():():():"void":():0:()),
-  (variable, var-type) = x
 ::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
 
 declaration x values @ 
