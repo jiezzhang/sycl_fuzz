@@ -551,7 +551,7 @@ expr-term ctx T
 ::= *24 const(T)
   | *24 rval(ctx, T)
   | *2 unary-expr(ctx, T)
-  | *24 try-fun-call(ctx, T)
+  | *10 try-fun-call(ctx, T)
   | *1 "(" expr(ctx, T) ")"
   | *1 "(" expr(ctx, T) ", " expr(ctx, T) ")"
   #| *1 "(" cond(ctx) " ? " expr(ctx, T) " : " expr(ctx, T) ")"
