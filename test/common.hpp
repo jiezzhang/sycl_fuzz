@@ -9,4 +9,5 @@
 
 #include "Argument_parse.hpp"
 #include "Fuzz_selector.hpp"
+#include "macros.hpp"
 #endif // !_SYCLSMITH_COMMON_H_

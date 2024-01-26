@@ -497,11 +497,11 @@ if-clause ctx
 
 switch-clause ctx
 ::= {
-    "switch (" type-cast(expr(ctx, "int"), "double", "size_t") ") {"
+    "switch (" type-cast(expr(ctx, "int"), "DOUBLE", "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
     "}" }
   | {
-    "switch (" type-cast(expr(ctx, "int"), "double", "size_t") ") {"
+    "switch (" type-cast(expr(ctx, "int"), "DOUBLE", "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
       "default: "
         statements(ctx)
@@ -721,7 +721,7 @@ scal-val a ::= a
 
 ivs-val a ctx @ (aname:adim:_) = a ::= aname ivs-val2(adim, ctx)
 ivs-val2 0 _ ::= ""
-ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "double", "size_t") "]" ivs-val2(sub(adim, 1), ctx)
+ivs-val2 adim ctx ::= "[" type-cast(ivs-val3(ctx), "DOUBLE", "size_t") "]" ivs-val2(sub(adim, 1), ctx)
 ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 ::= *20 anyVar(ivs)
   | anyVar(ivs) "+" randint(1, mul(max-loop-len(), 2))
@@ -885,7 +885,7 @@ int _      ::= int()
 const T @ i-types = integer-type-sets() ? in(T, i-types)
 ::= int()
 const T @ f-types = float-type-sets() ? in(T, f-types)
-::= T "(" int()"."int() ")"
+::= T "(" int()"."int() "f)"
 const T @ v-types = vector-type-sets() ? in(T, v-types)
 ::= T "(" int() ")"
 const T ::= T " const ERROR!!!"
@@ -999,7 +999,7 @@ unsigned_cl_type
 
 float_type
 ::= "float"
-  | "double"
+  | "DOUBLE"
   #| "cl_double"
   #| "cl_half"
   #| "cl_float"
@@ -1007,7 +1007,7 @@ float_type
 vec_type ::= vec_elem_type() vec_dims()
 
 vec_elem_type
-::= "char" | "short" | "int" | "long" | "float" | "double" | "half"
+::= "char" | "short" | "int" | "long" | "float" | "DOUBLE" | "HALF"
   #| "cl_char" | "cl_uchar"   | "cl_double" | "cl_half"
   #| "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float"
   | "schar" | "uchar" | "ushort" | "uint" | "ulong" | "longlong" | "ulonglong"
@@ -1029,7 +1029,7 @@ letter
 # some type sets                                                                                   #
 ####################################################################################################
 #TODO: half and double type !
-float-type-set ::= "float","double","half"
+float-type-set ::= "float","DOUBLE","HALF"
 cpp-integer-type-set ::= "int","long","long long","short","char","unsigned int","unsigned long","unsigned long long","unsigned short","unsigned char"
 #cl-integer-type-set ::= "cl_char","cl_short","cl_int","cl_long","cl_uchar","cl_ushort","cl_uint","cl_ulong"
 
@@ -1043,11 +1043,11 @@ int-vector-elem-type-set4 ::= "char4","short4","int4","long4","schar4","uchar4",
 int-vector-elem-type-set8 ::= "char8","short8","int8","long8","schar8","uchar8","ushort8","uint8","ulong8","longlong8","ulonglong8"
 int-vector-elem-type-set16 ::= "char16","short16","int16","long16","schar16","uchar16","ushort16","uint16","ulong16","longlong16","ulonglong16"
 
-float-vector-elem-type-set2 ::= "float2","double2","half2"
-float-vector-elem-type-set3 ::= "float3","double3","half3"
-float-vector-elem-type-set4 ::= "float4","double4","half4"
-float-vector-elem-type-set8 ::= "float8","double8","half8"
-float-vector-elem-type-set16 ::= "float16","double16","half16"
+float-vector-elem-type-set2 ::= "float2","DOUBLE2","HALF2"
+float-vector-elem-type-set3 ::= "float3","DOUBLE3","HALF3"
+float-vector-elem-type-set4 ::= "float4","DOUBLE4","HALF4"
+float-vector-elem-type-set8 ::= "float8","DOUBLE8","HALF8"
+float-vector-elem-type-set16 ::= "float16","DOUBLE16","HALF16"
 
 integer-vector-type-sets @
   set1 = cat(int-vector-elem-type-set2(), int-vector-elem-type-set3()),

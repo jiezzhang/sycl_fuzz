@@ -4,7 +4,8 @@ result_root=$fuzz_root/fuzz_result
 source_root=$fuzz_root/fuzz_source
 
 
-declare -A build_option=( ["cpu"]="-fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice" ["gpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"" ["oclgpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"" [acc]="-fintelfpga")
+declare -A build_option=( ["cpu"]="-fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice" ["gpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device *\"" ["oclgpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"" [acc]="-fintelfpga")
+declare -A type_option=( ["cpu"]="" ["gpu"]="-DNON_DOUBLE=1" ["oclgpu"]="-DNON_DOUBLE=1" ["acc"]="-DNON_HALF=1")
 
 if [ ! -d "$result_root" ]
 then
@@ -56,7 +57,8 @@ do
         do
             for k in {"cpu","gpu","oclgpu","acc"}
             do
-                # Build test
+                # Append type w/a
+                compiler_cmd="$compiler_cmd ${type_option[$k]} "
                 # Build test
                 if [[ $j == "JIT" ]]
                 then
