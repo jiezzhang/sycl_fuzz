@@ -19,7 +19,7 @@ num=0;
 compile_cmd="icpx -fsycl -o test.run sycl_launcher.cpp libcpp.cpp -DPARALLEL_FOR_ND_RANGE -Wno-everything";
 while [ 1 ]
 do
-    source init_env.sh > /dev/null 2>&1
+    source ./init_env.sh > /dev/null 2>&1
 
     rm -rf $source_root/*
     cp -r ../test/* $source_root;
