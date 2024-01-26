@@ -15,10 +15,10 @@ int main(int argc, char **argv) {
   std::vector<ulong> result(dim);
 
   {
-    cl::sycl::queue queue(selector);
-    cl::sycl::range<1> global_range(dim);
-    cl::sycl::range<1> local_range(local_dim);
-    cl::sycl::buffer<ulong, 1> res_buffer(result.data(), global_range);
+    sycl::queue queue(selector);
+    sycl::range<1> global_range(dim);
+    sycl::range<1> local_range(local_dim);
+    sycl::buffer<ulong, 1> res_buffer(result.data(), global_range);
 
     kernel_fun(queue, global_range, local_range, res_buffer);
   }

@@ -6,8 +6,7 @@ struct IsVecNot : std::false_type
 {};
 
 template <typename T, int N>
-struct IsVecNot<cl::sycl::vec<T, N>> : std::true_type
-{};
+struct IsVecNot<sycl::vec<T, N>> : std::true_type {};
 
 template <typename T>
 using EnableIfNotVecTypes = typename std::enable_if<!IsVecNot<T>::value, T>::type;
@@ -26,10 +25,8 @@ EnableIfVecTypes<T1> cast(T2 val) {
     return T1(val);
 }
 
-//Vector -> Scalar
-//Vector -> Vector 
-template <typename T1, typename T, int N>
-T1 cast(cl::sycl::vec<T, N> vec) {
+// Vector -> Scalar
+// Vector -> Vector
+template <typename T1, typename T, int N> T1 cast(sycl::vec<T, N> vec) {
     return  T1(vec.s0());
 }
-

@@ -18,17 +18,17 @@ program @
   buf-accs= buf-acc-set(bufs), # acc main locals
   buf-accs1 = output(buf-accs),
   vars    = union(locals, accs),   # there should be at least one variable
-  as      = buf-accs, 
+  as      = buf-accs,
   ivs     = (), # names of variables used for array indices
-  #TODO:PASS SELFDEFINED TYPE BY CTX 
+  #TODO:PASS SELFDEFINED TYPE BY CTX
   #TODO:RECORD GLOBAL TYPE IN PYTHON ARGUMENTS??
   # context = (lvals, rvals, arrays, free index variables, functions, return statement, cean expression form, throw statement)
-  ctx     = (vars:vars:as:ivs:fs:"void":():0:())  
+  ctx     = (vars:vars:as:ivs:fs:"void":():0:())
 ::= {
   "#include \"libcpp.h\""
   "#include \"type_cast.hpp\""
   "#include <CL/sycl.hpp>"
-  "using namespace cl::sycl;"
+  "using namespace sycl;"
   ""
   list-lines(structs, decl-struct)
   list-lines(fs, decl-fun)
@@ -72,15 +72,15 @@ named-fun-sig ftype:ftypes param:params @
 ::= ftype " " param-var ", " named-fun-sig(ftypes, params)
 
 ####################################################################################################
-# declarations                                                                                     # 
+# declarations                                                                                     #
 ####################################################################################################
-declaration x values @ 
+declaration x values @
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
 ? is-str(var-type)
 ::= *100 var-type " " variable " = " expr(new-ctx, var-type) ";"
 
-declaration x values @ 
+declaration x values @
   new-ctx = (():values:():():():"void":():0:()),
   (variable, var-type) = x
 ? in("buffer", var-type)
@@ -95,7 +95,7 @@ declaration-buf x values @
 ::= {
 real-type " " variable "_ptr[" array-size() "] = {" const(real-type) "};"
 "buffer<" real-type "> " variable  " (" variable "_ptr, range(" array-size() "));"
-} 
+}
 
 #TODO: Apply other mode
 declaration-acc buff buf-acc @
@@ -170,13 +170,13 @@ try-catch-stmt ctx
   "try {"
     block(ctx)
   "} catch (" type() " " local ") {"
-    block(new-ctx)  
+    block(new-ctx)
   "}" }
 | {
   "try {"
     block(ctx)
   "} catch (" type() ") {"
-    block(ctx)  
+    block(ctx)
   "}" }
 
 try-catch-stmt _ ::= "; /* try-catch statement was omited here */"
@@ -256,9 +256,9 @@ lval3 ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx,
 
 plusplus ctx ? not(islval(ctx)) ::= "pp ERROR!!!"
 
-plusplus ctx @ 
+plusplus ctx @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
-  type-sets = basic-type-sets() 
+  type-sets = basic-type-sets()
 ::= anyVarTypes(lv, type-sets) "++"
   | "++" anyVarTypes(lv, type-sets)
 
@@ -281,7 +281,7 @@ cean-lv-assign2 ctx
    new-lval-ctx = (lv:rv:new-as:ivs:fs:ret:(caf:()):throw:()),
    cean-lval = cean-val(ca, new-lval-ctx),
    new-ctx = (lv:rv:new-as:ivs:fs:ret:(caf,cean-lval):throw:())
- ? eq(len(old-caf), 0) # assert 
+ ? eq(len(old-caf), 0) # assert
 ::= {
   "CEAN_HEADER" len(caf) "(" cean-ref-header(caf) ")"
     cean-lval " " assign-op() " " expr(new-ctx) ";"
@@ -299,7 +299,7 @@ cean-form2 ::= randint(1, array-size()) | *5 array-size()
 cean-get-new-as ctx @ (lv:rv:as:ivs:fs:ret:caf2:_) = ctx ? neq(len(caf2), 0)
 ::= cean-get-new-as2(as, get(caf2,0))
 
-cean-get-new-as ctx ::= () 
+cean-get-new-as ctx ::= ()
 
 cean-get-new-as2 () caf ::= ()
 cean-get-new-as2 as caf @ (a:_) = as, (aname:adim:_) = a ? ge(adim, len(caf))
@@ -325,7 +325,7 @@ cean-if-clause2 ctx
    new-as = diff(as, cas),
    new-caf = push-front(cvals, caf),
    new-ctx = (lv:rv:new-as:ivs:fs:ret:new-caf:throw:())
- ? eq(len(old-caf), 0) # assert 
+ ? eq(len(old-caf), 0) # assert
 ::= {
   "CEAN_HEADER" len(caf) "(" cean-ref-header(caf) ")"
     "if (" cean-cond(new-ctx) ")" cean-if-block(new-ctx)
@@ -379,7 +379,7 @@ cean-vals3 ctx
 
 # generate CEAN value
 
-cean-val a ctx @ (aname:adim:_) = a, (lv:rv:as:ivs:fs:ret:caf2:_) = ctx, (caf:_) = caf2 
+cean-val a ctx @ (aname:adim:_) = a, (lv:rv:as:ivs:fs:ret:caf2:_) = ctx, (caf:_) = caf2
 ::= aname cean-val2(sub(adim, len(caf)), len(caf), caf, ctx)
 
 cean-val2 0 len-caf () ctx ::= ""
@@ -413,7 +413,7 @@ safe-arr-idx ctx ::= randint(0, sub(array-size(), 1))
 cilk-spawn-lv-assign ctx @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(islval (ctx), neq(len(fs), 0))
 ::= cilk-spawn-lv-assign1(ctx)
   | cilk-spawn-lv-assign2(ctx)
-  | cilk-spawn-lv-assign3(ctx) 
+  | cilk-spawn-lv-assign3(ctx)
 
 cilk-spawn-lv-assign _ ::= "; /* cilk-spawn could be here */"
 
@@ -440,10 +440,10 @@ cilk-spawn-lv-assign2b ctx
   statement(new-ctx)
   "_Cilk_sync;" }
 
-cilk-spawn-lv-assign3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx ? and(isarr(ctx), and(neq(len(ivs), 0), eq(ret, "void"))) 
+cilk-spawn-lv-assign3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx ? and(isarr(ctx), and(neq(len(ivs), 0), eq(ret, "void")))
 ::= cilk-spawn-lv-assign3b ctx
 
-cilk-spawn-lv-assign3 ctx ::= cilk-spawn-lv-assign2(ctx) 
+cilk-spawn-lv-assign3 ctx ::= cilk-spawn-lv-assign2(ctx)
 
 cilk-spawn-lv-assign3b ctx
   @ (lv:rv:as:ivs:fs:ret:caf:throw:_) = ctx,
@@ -464,10 +464,10 @@ mid-lim     ::= div(max-loop-len(), 2)
 low-lim ()  ::= min-lim() | randint(min-lim(), mid-lim())
 big-lim ()  ::= max-lim() | randint(mid-lim(), max-lim())
 low-lim ivs @
-  type-sets = scalar-type-sets() 
+  type-sets = scalar-type-sets()
 ::= anyVarTypes(ivs, type-sets) | min-lim() | randint(min-lim(), mid-lim())
 big-lim ivs @
-  type-sets = scalar-type-sets() 
+  type-sets = scalar-type-sets()
 ::= anyVarTypes(ivs, type-sets) | max-lim() | randint(mid-lim(), max-lim())
 step-pos i  ::= i " += " randint(1,8) | *4 i "++" | *4 "++" i
 step-neg1 i ::= i "--" | "--" i
@@ -495,7 +495,7 @@ if-clause ctx
 ::= "if (" cond(ctx) ") " block(ctx)
   | "if (" cond(ctx) ") " block(ctx) " else " block(ctx)
 
-switch-clause ctx 
+switch-clause ctx
 ::= {
     "switch (" type-cast(expr(ctx, "int"), "double", "size_t") ") {"
       switch-cases(int-set(randint(1,5)), ctx)
@@ -530,7 +530,7 @@ switch-case n ctx @
 ####################################################################################################
 
 # condition
-cond ctx @ 
+cond ctx @
   type-sets = integer-type-sets(),
   cond-type = any(type-sets)
 ::= *16 rvalint(ctx)
@@ -541,7 +541,7 @@ cond ctx @
 #TODO: vector support start here
 expr ctx T ::= expr-term(ctx, T) expr-T(ctx, T)
 
-#Jie: limit line length by removing expr-T 
+#Jie: limit line length by removing expr-T
 expr-T ctx T
 ::= *1 " " binary-op(T) " " expr-term(ctx, T)
   #| *1 " " binary-op(T) " " expr-term(ctx, T) expr-T(ctx, T)
@@ -558,7 +558,7 @@ expr-term ctx T
   #| *1 div-expr(ctx, T)
 
 #Jie: won't try %. That will limit rval data type
-div-expr ctx T @ 
+div-expr ctx T @
   rv = rval(ctx, T),
   type-sets = scalar-type-sets()
   ? in(T, type-sets)
@@ -596,7 +596,7 @@ rval2 ctx T @ (lv:rv:as:ivs:fs:ret:_) = ctx ? and(neq(len(as),0), neq(len(ivs), 
   | "copy(" array-rval(ctx, T) ")"
 rval2 ctx T ::= rval3(ctx, T)
 
-rval3 ctx T 
+rval3 ctx T
 ::= *100 vector-rval(ctx, T)
 # | "copy(" vector-rval(ctx, T) ")"
 
@@ -629,7 +629,7 @@ array-rval ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
   v = any(as)
 ::= normal-array-rval-cast(v, T, ctx)
-array-rval ctx T ::= "array-rval ERROR!!!" 
+array-rval ctx T ::= "array-rval ERROR!!!"
 
 normal-array-rval-cast v T ctx @
   (array, var-type) = v,
@@ -653,9 +653,9 @@ normal-vector-rval-cast v T @
 
 
 # C operators
-# TODO: ! and ~ will change data type 
+# TODO: ! and ~ will change data type
 unary-op
-::= "-" | "+" 
+::= "-" | "+"
 #  | "!" | "~"
 
 #TODO: Add all logical operators
@@ -678,7 +678,7 @@ binary-logical-op T @
   |     "^"
 binary-logical-op T ::= binary-cal-op(T)
 
-relation-op 
+relation-op
 ::= "=="
   | "!="
   | "<="
@@ -686,7 +686,7 @@ relation-op
   | "<"
   | ">"
 
-logical-op 
+logical-op
 ::= "&&"
   | "||"
 
@@ -703,7 +703,7 @@ assign-op
 #disable most binary operators
 
 ####################################################################################################
-# manipulations with arrays and functions                                                          # 
+# manipulations with arrays and functions                                                          #
 ####################################################################################################
 
 list-lines () foo ::= ""
@@ -737,14 +737,14 @@ ivs-val3 ctx @ (lv:rv:as:ivs:fs:ret:caf:_) = ctx
 # nexted expressions can't have CEAN form
   | "((unsigned int)(" expr((lv:rv:as:ivs:fs:ret:():0:()), "int") "))%" array-size()
 
-decl-arr a @ 
+decl-arr a @
   (array,array-type) = a,
   (aname, adim) = array
 ::= array-type " " aname decl-arr2(adim) " = {" const(array-type) "};"
 decl-arr2 0 ::= ""
 decl-arr2 adim ::= "[" array-size() "]" decl-arr2(sub(adim, 1))
 
-try-fun-call ctx T @ 
+try-fun-call ctx T @
   (lv:rv:as:ivs:fs:ret:_) = ctx,
   type-sets = basic-type-sets(),
   f = anyTypes(fs, type-sets)
@@ -763,10 +763,10 @@ fun-call2 i:l ctx ::= ", " expr(ctx, i) fun-call2(l, ctx)
 
 decl-fun f @ (fname:ftype:fsig:_) = f ::= ftype " " fname "(" join(", ", fsig) ");"
 
-decl-struct s @ 
+decl-struct s @
   (sname,stype) = s,
   (s1,elem,p_elem) = stype
-::= 
+::=
 {
   "struct " sname " {"
   list-lines(elem, decl-var)
@@ -778,7 +778,7 @@ decl-var v @ (vname,vtype) = v ::= vtype " " vname ";"
 
 ####################################################################################################
 # sets                                                                                             #
-#################################################################################################### 
+####################################################################################################
 acc-set            ::= set-gen(acc, global_acc_type, (), 1)
 var-set n          ::= set-gen(var, type, (), n)
 ptr-set n          ::= set-gen(ptr, type, (), n)
@@ -802,7 +802,7 @@ set-gen genf type_foo genf_in n @
 ::= i:l
 set-uniq i_var type_foo l genf genf_in @
   lvars = get-vars(l)
-  ? in(i_var, lvars) 
+  ? in(i_var, lvars)
 ::= set-uniq(genf(genf_in,), type_foo, l, genf, genf_in)
 set-uniq i type_foo _ _ _ @
   var-type = type_foo()
@@ -816,7 +816,7 @@ arr-set-gen dim n @
 ::= i:l
 arr-set-uniq i l dim @
   lvars = get-vars(l)
-  ? in(i, lvars) 
+  ? in(i, lvars)
 ::= arr-set-uniq(arr(dim), l, dim)
 arr-set-uniq i _ _ @
   arr-type = type()
@@ -873,7 +873,7 @@ set-uniq-fun-var n param @
 ::= (var-name, param)
 
 ####################################################################################################
-# some basic stuff                                                                                 #  
+# some basic stuff                                                                                 #
 ####################################################################################################
 acc _      ::= "result[item.get_global_linear_id()]"
 var _      ::= "v_" int() | *1000 "v_" identifier()
@@ -916,7 +916,7 @@ cast exp T
 # Supported cast: int2double, double2int
 type-cast exp expT dstT @
     expT1 = constsub(expT),
-    dstT1 = constsub(dstT) 
+    dstT1 = constsub(dstT)
 ? and(in("const", expT), in("const", dstT))
 ::= type-cast1(exp, expT1, dstT1)
 type-cast exp expT dstT @
@@ -924,7 +924,7 @@ type-cast exp expT dstT @
 ? in("const", expT)
 ::= type-cast1(exp, expT1, dstT)
 type-cast exp expT dstT @
-    dstT1 = constsub(dstT) 
+    dstT1 = constsub(dstT)
 ? in("const", dstT)
 ::= type-cast1(exp, expT, dstT1)
 type-cast exp expT dstT
@@ -1004,12 +1004,12 @@ float_type
   #| "cl_half"
   #| "cl_float"
 
-vec_type ::= vec_elem_type() vec_dims() 
+vec_type ::= vec_elem_type() vec_dims()
 
 vec_elem_type
-::= "char" | "short" | "int" | "long" | "float" | "double" | "half" 
+::= "char" | "short" | "int" | "long" | "float" | "double" | "half"
   #| "cl_char" | "cl_uchar"   | "cl_double" | "cl_half"
-  #| "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float" 
+  #| "cl_short" | "cl_ushort" | "cl_int" | "cl_uint" | "cl_long" | "cl_ulong" | "cl_float"
   | "schar" | "uchar" | "ushort" | "uint" | "ulong" | "longlong" | "ulonglong"
 
 vec_dims
@@ -1026,7 +1026,7 @@ letter
   | "u" | "v" | "w" | "x" | "y" | "z"
 
 ####################################################################################################
-# some type sets                                                                                   #  
+# some type sets                                                                                   #
 ####################################################################################################
 #TODO: half and double type !
 float-type-set ::= "float","double","half"
