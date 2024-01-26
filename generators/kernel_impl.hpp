@@ -18,7 +18,7 @@
 #endif
 #include "libcpp.h"
 #include "type_cast.hpp"
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 using namespace sycl;
 
 short8 f3_ji(float, unsigned int, sycl::cl_half);

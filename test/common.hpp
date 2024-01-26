@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 #include "Argument_parse.hpp"
 #include "Fuzz_selector.hpp"

@@ -1,5 +1,5 @@
 #include <iostream>
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 template <class T>
 struct IsVecNot : std::false_type

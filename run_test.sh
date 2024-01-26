@@ -1,6 +1,8 @@
-result_root=/export/users/jiezhang/fuzz_result
-source_root=/export/users/jiezhang/fuzz_source
 fuzz_root=`pwd`;
+gen_root=$fuzz_root/generators
+result_root=$fuzz_root/fuzz_result
+source_root=$fuzz_root/fuzz_source
+
 
 declare -A build_option=( ["cpu"]="-fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice" ["gpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"" ["oclgpu"]="-fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xs \"-device cfl\"" [acc]="-fintelfpga")
 
@@ -11,7 +13,7 @@ fi
 if [ ! -d "$source_root" ]
 then
     mkdir $source_root;
-    cp -r ../test/* $source_root;
+    cp -r test/* $source_root;
 fi
 cd $fuzz_root;
 
@@ -22,7 +24,7 @@ do
     source ./init_env.sh > /dev/null 2>&1
 
     rm -rf $source_root/*
-    cp -r ../test/* $source_root;
+    cp -r test/* $source_root;
     date=`date +"%Y%m%d" --date="1 days ago"`;
     output_root=$result_root/$date;
 
@@ -33,7 +35,7 @@ do
 
     while [ 1 ]
     do
-    	python2 g -n 900000000 runcg-0.6.g -f $source_root/kernel.hpp>out.log 2>&1;
+        python2 $gen_root/g -n 900000000 $gen_root/runcg-0.6.g -f $source_root/kernel.hpp>out.log 2>&1;
     	grep "exceed" out.log > /dev/null 2>&1
     	out=$?
 

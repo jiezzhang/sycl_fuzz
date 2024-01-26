@@ -27,7 +27,7 @@ program @
 ::= {
   "#include \"libcpp.h\""
   "#include \"type_cast.hpp\""
-  "#include <CL/sycl.hpp>"
+  "#include <sycl/sycl.hpp>"
   "using namespace sycl;"
   ""
   list-lines(structs, decl-struct)
