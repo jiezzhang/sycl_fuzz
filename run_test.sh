@@ -1,13 +1,3 @@
-timestamp=$(date -d "2 day ago" "+%Y%m%d")_160000
-
-export ICS_START=/rdrive/ics/itools/unx/bin
-source $ICS_START/icssetup.sh
-source $ICS_START/icsenv.sh
-
-ics ws -archive deploy_xmain-rel xmainefi2linux $timestamp
-ics config -ws xmainefi2linux prod gcc=sys ld=bfd
-ics set context ws host
-
 result_root=/export/users/jiezhang/fuzz_result
 source_root=/export/users/jiezhang/fuzz_source
 fuzz_root=`pwd`;
@@ -29,6 +19,8 @@ num=0;
 compile_cmd="icpx -fsycl -o test.run sycl_launcher.cpp libcpp.cpp -DPARALLEL_FOR_ND_RANGE -Wno-everything";
 while [ 1 ]
 do
+    source init_env.sh > /dev/null 2>&1
+
     rm -rf $source_root/*
     cp -r ../test/* $source_root;
     date=`date +"%Y%m%d" --date="1 days ago"`;
